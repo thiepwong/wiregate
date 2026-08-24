@@ -38,6 +38,8 @@ find "$SOURCE_DIR" "$DEPLOYMENTS_DIR" -type f \( \
     missing=
     grep -Fq "File: $relative" "$file" || missing="${missing} File"
     grep -Fq "Project: WireGate" "$file" || missing="${missing} Project"
+    grep -Fq "Copyright (c) 2026 Thiep Wong" "$file" || missing="${missing} Copyright"
+    grep -Fq "SPDX-License-Identifier: MIT" "$file" || missing="${missing} SPDX"
     grep -Fq "Author: Thiep Wong" "$file" || missing="${missing} Author"
     grep -Fq "Email: thiep.wong@gmail.com" "$file" || missing="${missing} Email"
     grep -Eq "Date: [0-9]{4}-[0-9]{2}-[0-9]{2}" "$file" || missing="${missing} Date"

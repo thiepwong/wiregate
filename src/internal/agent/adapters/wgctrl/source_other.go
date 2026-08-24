@@ -2,6 +2,8 @@
 
 // File: src/internal/agent/adapters/wgctrl/source_other.go
 // Project: WireGate
+// Copyright (c) 2026 Thiep Wong
+// SPDX-License-Identifier: MIT
 // Author: Thiep Wong
 // Email: thiep.wong@gmail.com
 // Date: 2026-08-24

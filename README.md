@@ -188,3 +188,9 @@ For backup, uninstall, and upgrade procedures, see
 - [`docs/WIREGATE_SOLUTION.md`](docs/WIREGATE_SOLUTION.md): solution design.
 - [`docs/MULTIPASS_LAB_VI.md`](docs/MULTIPASS_LAB_VI.md): macOS/Multipass test
   environment runbook.
+
+## License
+
+WireGate is released under the [MIT License](LICENSE).
+
+Copyright (c) 2026 [Thiep Wong](mailto:thiep.wong@gmail.com).
