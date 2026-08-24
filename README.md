@@ -50,7 +50,7 @@ For the Linux deployment target:
 ## Clone the repository
 
 ```bash
-git clone <repository-url> wiregate
+git clone https://github.com/thiepwong/wiregate.git
 cd wiregate
 ```
 
