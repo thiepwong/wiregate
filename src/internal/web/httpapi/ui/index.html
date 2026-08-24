@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -9,35 +9,35 @@
 <body>
   <header>
     <div>
-      <p class="eyebrow">ĐIỀU KHIỂN GATEWAY CỤC BỘ</p>
+      <p class="eyebrow">LOCAL GATEWAY CONTROL</p>
       <h1>WireGate</h1>
     </div>
     <div class="header-actions">
-      <div id="agent-status" class="status">Cần đăng nhập</div>
-      <button id="password" class="secondary" type="button" hidden>Đổi mật khẩu</button>
-      <button id="logout" class="secondary" type="button" hidden>Đăng xuất</button>
+      <div id="agent-status" class="status">Sign-in required</div>
+      <button id="password" class="secondary" type="button" hidden>Change password</button>
+      <button id="logout" class="secondary" type="button" hidden>Sign out</button>
     </div>
   </header>
   <main id="auth-view">
     <section class="auth-card">
       <div>
-        <p class="eyebrow">TRUY CẬP AN TOÀN</p>
-        <h2>Đăng nhập gateway này</h2>
-        <p class="auth-help">Phiên dùng secure same-site cookie; agent đặc quyền chỉ nghe trên Unix socket.</p>
+        <p class="eyebrow">SECURE ACCESS</p>
+        <h2>Sign in to this gateway</h2>
+        <p class="auth-help">The session uses a secure SameSite cookie; the privileged agent listens only on a Unix socket.</p>
       </div>
       <form id="login-form">
-        <label>Tên đăng nhập<input name="username" autocomplete="username" required></label>
-        <label>Mật khẩu<input name="password" type="password" autocomplete="current-password" required></label>
-        <button type="submit">Đăng nhập</button>
+        <label>Username<input name="username" autocomplete="username" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Sign in</button>
       </form>
       <details>
-        <summary>Khởi tạo lần đầu</summary>
+        <summary>First-time setup</summary>
         <form id="bootstrap-form">
           <label>Bootstrap token<input name="token" type="password" autocomplete="off" required></label>
-          <label>Tên đăng nhập<input name="username" autocomplete="username" required></label>
-          <label>Tên hiển thị<input name="display_name" autocomplete="name" required></label>
-          <label>Mật khẩu<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
-          <button type="submit">Tạo quản trị viên đầu tiên</button>
+          <label>Username<input name="username" autocomplete="username" required></label>
+          <label>Display name<input name="display_name" autocomplete="name" required></label>
+          <label>Password<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
+          <button type="submit">Create first administrator</button>
         </form>
       </details>
       <p id="auth-error" class="error" hidden></p>
@@ -48,7 +48,7 @@
       <div><span>Gateway</span><strong id="gateway">—</strong></div>
       <div><span>Interface</span><strong id="interface-count">—</strong></div>
       <div><span>Peer</span><strong id="peer-count">—</strong></div>
-      <button id="reload" type="button">Làm mới</button>
+      <button id="reload" type="button">Refresh</button>
     </section>
     <p id="error" class="error" hidden></p>
     <section>
@@ -80,65 +80,65 @@
       <div class="peer-title"><span>Peers</span><span class="peer-total"></span></div>
       <div class="peers"></div>
       <div class="interface-actions">
-        <button class="adopt-interface" type="button">Tiếp quản interface</button>
-        <button class="add-peer secondary" type="button">+ Thêm peer</button>
+        <button class="adopt-interface" type="button">Adopt interface</button>
+        <button class="add-peer secondary" type="button">+ Add peer</button>
       </div>
     </article>
   </template>
   <dialog id="interface-dialog">
     <form id="interface-form" method="dialog">
-      <div class="dialog-head"><h2>Tạo WireGuard interface</h2><button class="icon secondary" type="button" data-close>×</button></div>
-      <label>Tên interface<input name="name" value="wg0" pattern="[A-Za-z0-9_.-]+" required></label>
-      <label>Địa chỉ tunnel (CIDR)<input name="address" value="10.77.0.1/24" required></label>
+      <div class="dialog-head"><h2>Create WireGuard interface</h2><button class="icon secondary" type="button" data-close>×</button></div>
+      <label>Interface name<input name="name" value="wg0" pattern="[A-Za-z0-9_.-]+" required></label>
+      <label>Tunnel address (CIDR)<input name="address" value="10.77.0.1/24" required></label>
       <label>UDP listen port<input name="listen_port" type="number" min="1" max="65535" value="51820" required></label>
       <label>Deployment profile<select name="deployment_profile"><option value="server_only">Server only</option><option value="lan">LAN access</option><option value="full_tunnel">Full tunnel / NAT</option></select></label>
       <label>Firewall<select name="firewall_mode"><option value="external">External / manual</option><option value="managed_nft">WireGate managed nftables</option></select></label>
-      <label>LAN CIDR (phân tách dấu phẩy)<input name="lan_cidrs" placeholder="192.168.1.0/24"></label>
+      <label>LAN CIDRs (comma-separated)<input name="lan_cidrs" placeholder="192.168.1.0/24"></label>
       <label>Egress device<input name="egress_device" placeholder="eth0"></label>
-      <label class="check"><input name="auto_start" type="checkbox" checked> Tự khởi động sau reboot</label>
-      <label>Lý do<input name="reason" value="Create WireGuard interface" required></label>
-      <button type="submit">Xem trước & tạo</button>
+      <label class="check"><input name="auto_start" type="checkbox" checked> Start automatically after reboot</label>
+      <label>Reason<input name="reason" value="Create WireGuard interface" required></label>
+      <button type="submit">Preview & create</button>
       <p class="form-error error" hidden></p>
     </form>
   </dialog>
   <dialog id="peer-dialog">
     <form id="peer-form" method="dialog">
-      <div class="dialog-head"><h2>Thêm peer</h2><button class="icon secondary" type="button" data-close>×</button></div>
+      <div class="dialog-head"><h2>Add peer</h2><button class="icon secondary" type="button" data-close>×</button></div>
       <input name="interface_id" type="hidden"><input name="revision" type="hidden">
-      <label>Tên peer<input name="name" placeholder="laptop-anh" required></label>
-      <label>Key mode<select name="key_mode"><option value="managed">Managed — tải lại được</option><option value="one_time">One-time — chỉ tải một lần</option><option value="external">External — client tự giữ private key</option></select></label>
+      <label>Peer name<input name="name" placeholder="laptop-alice" required></label>
+      <label>Key mode<select name="key_mode"><option value="managed">Managed — reusable download</option><option value="one_time">One-time — download once</option><option value="external">External — client retains private key</option></select></label>
       <label class="external-key" hidden>Client public key<input name="external_public_key"></label>
-      <label>Địa chỉ client (để trống để IPAM cấp)<input name="server_allowed_ips" placeholder="10.77.0.2/32"></label>
-      <label>Route phía client (phân tách dấu phẩy)<input name="client_routes" placeholder="10.77.0.0/24"></label>
-      <label>DNS (phân tách dấu phẩy)<input name="dns" value="1.1.1.1"></label>
+      <label>Client address (leave blank for IPAM)<input name="server_allowed_ips" placeholder="10.77.0.2/32"></label>
+      <label>Client routes (comma-separated)<input name="client_routes" placeholder="10.77.0.0/24"></label>
+      <label>DNS servers (comma-separated)<input name="dns" value="1.1.1.1"></label>
       <div class="two"><label>Endpoint host<input name="endpoint_host" required></label><label>Port<input name="endpoint_port" type="number" value="51820" min="1" max="65535" required></label></div>
-      <div class="two"><label>MTU<input name="mtu" type="number" value="1420"></label><label>Keepalive (giây)<input name="keepalive" type="number" value="25"></label></div>
-      <label class="check"><input name="use_preshared_key" type="checkbox" checked> Dùng preshared key</label>
-      <label>Lý do<input name="reason" value="Enroll VPN client" required></label>
-      <button type="submit">Xem trước & tạo</button>
+      <div class="two"><label>MTU<input name="mtu" type="number" value="1420"></label><label>Keepalive (seconds)<input name="keepalive" type="number" value="25"></label></div>
+      <label class="check"><input name="use_preshared_key" type="checkbox" checked> Use a preshared key</label>
+      <label>Reason<input name="reason" value="Enroll VPN client" required></label>
+      <button type="submit">Preview & create</button>
       <p class="form-error error" hidden></p>
     </form>
   </dialog>
   <dialog id="peer-update-dialog">
     <form id="peer-update-form" method="dialog">
-      <div class="dialog-head"><h2>Sửa peer</h2><button class="icon secondary" type="button" data-close>×</button></div>
+      <div class="dialog-head"><h2>Edit peer</h2><button class="icon secondary" type="button" data-close>×</button></div>
       <input name="peer_id" type="hidden"><input name="revision" type="hidden">
-      <label>Tên peer<input name="name" required></label>
-      <label>AllowedIPs phía server (phân tách dấu phẩy)<input name="server_allowed_ips" required></label>
-      <label>Route phía client (phân tách dấu phẩy)<input name="client_routes"></label>
-      <label>Endpoint peer, để trống nếu peer roaming<input name="endpoint" placeholder="client.example:51820"></label>
-      <label>Keepalive (giây)<input name="keepalive" type="number" min="0" max="65535"></label>
-      <label>Lý do<input name="reason" value="Update existing WireGuard peer" required></label>
-      <button type="submit">Xem trước & cập nhật</button>
+      <label>Peer name<input name="name" required></label>
+      <label>Server AllowedIPs (comma-separated)<input name="server_allowed_ips" required></label>
+      <label>Client routes (comma-separated)<input name="client_routes"></label>
+      <label>Peer endpoint (leave blank for roaming peers)<input name="endpoint" placeholder="client.example:51820"></label>
+      <label>Keepalive (seconds)<input name="keepalive" type="number" min="0" max="65535"></label>
+      <label>Reason<input name="reason" value="Update existing WireGuard peer" required></label>
+      <button type="submit">Preview & update</button>
       <p class="form-error error" hidden></p>
     </form>
   </dialog>
   <dialog id="password-dialog">
     <form id="password-form" method="dialog">
-      <div class="dialog-head"><h2>Đổi mật khẩu</h2><button class="icon secondary" type="button" data-close>×</button></div>
-      <label>Mật khẩu hiện tại<input name="current_password" type="password" required></label>
-      <label>Mật khẩu mới<input name="new_password" type="password" minlength="12" required></label>
-      <button type="submit">Đổi mật khẩu</button>
+      <div class="dialog-head"><h2>Change password</h2><button class="icon secondary" type="button" data-close>×</button></div>
+      <label>Current password<input name="current_password" type="password" required></label>
+      <label>New password<input name="new_password" type="password" minlength="12" required></label>
+      <button type="submit">Change password</button>
       <p class="form-error error" hidden></p>
     </form>
   </dialog>

@@ -15,7 +15,7 @@ async function request(path, options = {}) {
   const type = response.headers.get("content-type") || "";
   const body = type.includes("json") ? await response.json().catch(() => ({})) : await response.blob();
   if (!response.ok) {
-    const error = new Error(body?.error || `Yêu cầu thất bại (${response.status})`);
+    const error = new Error(body?.error || `Request failed (${response.status})`);
     error.status = response.status; throw error;
   }
   return {body, response};
@@ -33,7 +33,7 @@ const mutationHeaders = (revision) => ({
 function showAuth(message = "") {
   $("#auth-view").hidden = false; $("#app-view").hidden = true;
   $("#logout").hidden = true; $("#password").hidden = true;
-  $("#agent-status").textContent = "Cần đăng nhập"; $("#agent-status").classList.remove("online");
+  $("#agent-status").textContent = "Sign-in required"; $("#agent-status").classList.remove("online");
   $("#auth-error").textContent = message; $("#auth-error").hidden = !message;
 }
 function showApp() {
@@ -45,21 +45,21 @@ function showFormError(form, error) {
 }
 function previewText(plan) {
 	const warnings = (plan.issues || []).map((item) => `${item.severity}: ${item.summary}`).join("\n");
-	return `${plan.textual_diff_redacted || "Xác nhận thay đổi"}${warnings ? `\n\n${warnings}` : ""}`;
+	return `${plan.textual_diff_redacted || "Confirm changes"}${warnings ? `\n\n${warnings}` : ""}`;
 }
 async function previewAndCommit(path, payload, revision) {
   const plan = await postJSON(path, payload, mutationHeaders(revision));
-  if (!confirm(`${previewText(plan)}\n\nCommit operation này?`)) return null;
+  if (!confirm(`${previewText(plan)}\n\nCommit this operation?`)) return null;
   return postJSON(`/api/v1/operations/${encodeURIComponent(plan.operation_id)}/commit`,
     {reason: payload.reason || "Confirmed in WireGate UI"}, mutationHeaders());
 }
 
 function renderPeer(peer, record) {
   const item = document.createElement("div"); item.className = "peer";
-  const handshake = Number(peer.latest_handshake_at_ms) ? new Date(Number(peer.latest_handshake_at_ms)).toLocaleString() : "Chưa từng";
+  const handshake = Number(peer.latest_handshake_at_ms) ? new Date(Number(peer.latest_handshake_at_ms)).toLocaleString() : "Never";
   item.innerHTML = `<div class="peer-main"><strong></strong><code></code><small class="allowed"></small></div>
     <span class="activity"></span><small class="traffic"></small><small class="handshake"></small><div class="peer-actions"></div>`;
-  $("strong", item).textContent = peer.name || "Peer chưa đặt tên";
+  $("strong", item).textContent = peer.name || "Unnamed peer";
   $("code", item).textContent = peer.public_key;
   $(".allowed", item).textContent = (peer.allowed_ips || []).join(", ");
   $(".activity", item).textContent = `${peer.lifecycle_state || "active"} · ${peer.activity_state || "unknown"}`;
@@ -72,7 +72,7 @@ function renderPeer(peer, record) {
 		actions.append(actionButton("Config", () => exportPeer(peer, "conf")), actionButton("QR", () => exportPeer(peer, "qr")));
 	}
 	if (manageable && peer.lifecycle_state === "active") {
-		actions.append(actionButton("Sửa", () => openPeerUpdate(peer, record)), actionButton("Disable", () => lifecycle(peer, record, "disable")), actionButton("Revoke", () => lifecycle(peer, record, "revoke"), true));
+		actions.append(actionButton("Edit", () => openPeerUpdate(peer, record)), actionButton("Disable", () => lifecycle(peer, record, "disable")), actionButton("Revoke", () => lifecycle(peer, record, "revoke"), true));
 	} else if (manageable && peer.lifecycle_state === "disabled") {
     actions.append(actionButton("Enable", () => lifecycle(peer, record, "enable")));
   }
@@ -83,7 +83,7 @@ function actionButton(label, handler, danger = false) {
   button.textContent = label; button.addEventListener("click", handler); return button;
 }
 async function lifecycle(peer, record, mutation) {
-	if (mutation === "revoke" && !confirm("Revoke là thao tác bảo mật terminal và IP sẽ bị quarantine. Tiếp tục?")) return;
+	if (mutation === "revoke" && !confirm("Revocation is a terminal security action, and the peer's IP addresses will be quarantined. Continue?")) return;
 	try {
 		if (mutation === "revoke" && !await recentPassword()) return;
     await previewAndCommit(`/api/v1/peers/${encodeURIComponent(peer.id)}/lifecycle-previews`,
@@ -92,7 +92,7 @@ async function lifecycle(peer, record, mutation) {
   } catch (error) { alert(error.message); }
 }
 async function recentPassword() {
-  const password = prompt("Xác nhận lại mật khẩu để xuất private key:");
+  const password = prompt("Re-enter your password to export the private key:");
   if (!password) return false;
   await postJSON("/api/v1/auth/reauth", {password}, {"X-CSRF-Token": csrf()}); return true;
 }
@@ -115,11 +115,11 @@ function downloadBlob(blob, disposition, fallback) {
 async function renderInterface(record) {
   const fragment = $("#interface-template").content.cloneNode(true); const card = $(".interface-card", fragment);
   $(".interface-name", card).textContent = record.name;
-  $(".interface-addresses", card).textContent = (record.addresses || []).map((item) => `${item.address}/${item.prefix_length}`).join(", ") || "Chưa có địa chỉ host";
+  $(".interface-addresses", card).textContent = (record.addresses || []).map((item) => `${item.address}/${item.prefix_length}`).join(", ") || "No host address";
   $(".mode", card).textContent = enumLabel(record.management_mode, "MANAGEMENT_MODE_");
   $(".backend", card).textContent = enumLabel(record.backend, "INTERFACE_BACKEND_");
-  $(".runtime", card).textContent = record.runtime_present ? `active · ${record.service_state || "runtime"}` : "không active";
-  $(".config", card).textContent = record.config_present ? `revision ${record.revision || 0}` : "không có";
+  $(".runtime", card).textContent = record.runtime_present ? `active · ${record.service_state || "runtime"}` : "inactive";
+  $(".config", card).textContent = record.config_present ? `revision ${record.revision || 0}` : "unavailable";
   $(".drift", card).textContent = enumLabel(record.drift_state, "DRIFT_STATE_");
   $(".peer-total", card).textContent = String(record.peer_count || 0);
 	const mode = enumLabel(record.management_mode, "MANAGEMENT_MODE_");
@@ -131,7 +131,7 @@ async function renderInterface(record) {
   const container = $(".peers", card);
   try {
     const response = await getJSON(`/api/v1/interfaces/${encodeURIComponent(record.id)}/peers`);
-    if (!(response.peers || []).length) { container.textContent = "Chưa có peer"; container.classList.add("empty"); }
+    if (!(response.peers || []).length) { container.textContent = "No peers"; container.classList.add("empty"); }
     else response.peers.forEach((peer) => container.append(renderPeer(peer, record)));
   } catch (error) { container.textContent = error.message; container.classList.add("empty"); }
   return fragment;
@@ -139,25 +139,25 @@ async function renderInterface(record) {
 
 async function load() {
   const error = $("#error"), list = $("#interfaces"); error.hidden = true; list.replaceChildren();
-  $("#agent-status").textContent = "Đang kết nối…";
+  $("#agent-status").textContent = "Connecting…";
   try {
     const [agentResponse, interfaceResponse] = await Promise.all([getJSON("/api/v1/agent"), getJSON("/api/v1/interfaces")]);
     const interfaces = interfaceResponse.interfaces || [];
-    $("#agent-status").textContent = "Agent đã kết nối"; $("#agent-status").classList.add("online");
+    $("#agent-status").textContent = "Agent connected"; $("#agent-status").classList.add("online");
     $("#gateway").textContent = agentResponse.agent?.hostname || agentResponse.agent?.gateway_id || "Local";
     $("#interface-count").textContent = String(interfaces.length);
     $("#peer-count").textContent = String(interfaces.reduce((total, item) => total + Number(item.peer_count || 0), 0));
     for (const record of interfaces) list.append(await renderInterface(record));
-		if (!interfaces.length) list.innerHTML = '<div class="empty-state">Chưa phát hiện WireGuard interface có sẵn trên host.</div>';
+		if (!interfaces.length) list.innerHTML = '<div class="empty-state">No existing WireGuard interfaces were detected on this host.</div>';
   } catch (loadError) {
     if (loadError.status === 401) return showAuth();
-    $("#agent-status").textContent = "Agent không sẵn sàng"; $("#agent-status").classList.remove("online");
+    $("#agent-status").textContent = "Agent unavailable"; $("#agent-status").classList.remove("online");
     error.textContent = loadError.message; error.hidden = false;
   }
 }
 
 async function adoptInterface(record) {
-	const reason = prompt(`WireGate sẽ tiếp quản ${record.name} nhưng không rewrite file khi adopt. Nhập lý do:`, "Adopt existing WireGuard interface");
+	const reason = prompt(`WireGate will adopt ${record.name} without rewriting its configuration file. Enter a reason:`, "Adopt existing WireGuard interface");
 	if (!reason) return;
 	try {
 		const result = await previewAndCommit(`/api/v1/interfaces/${encodeURIComponent(record.id)}/adoption-previews`, {reason}, Number(record.revision || 0));
@@ -194,7 +194,7 @@ $("#peer-form").addEventListener("submit", async (event) => {
   try {
     const result = await previewAndCommit(`/api/v1/interfaces/${encodeURIComponent(value.interface_id)}/peer-previews`, payload, Number(value.revision));
     if (!result) return; $("#peer-dialog").close(); await load();
-    if (result.one_time_token && confirm("One-time profile đã sẵn sàng. Tải cấu hình ngay? Sau lần này không thể tải lại.")) {
+    if (result.one_time_token && confirm("The one-time profile is ready. Download it now? It cannot be downloaded again.")) {
       if (!await recentPassword()) return;
       const {body, response} = await request("/api/v1/artifacts/consume", {method: "POST", headers: {"Content-Type": "application/json", "X-CSRF-Token": csrf()},
         body: JSON.stringify({format: "conf", token: result.one_time_token})});
@@ -227,7 +227,7 @@ $("#reload").addEventListener("click", load);
 $("#password").addEventListener("click", () => $("#password-dialog").showModal());
 $("#password-form").addEventListener("submit", async (event) => {
   event.preventDefault(); const form = event.currentTarget, values = Object.fromEntries(new FormData(form));
-  try { await postJSON("/api/v1/auth/password", values, {"X-CSRF-Token": csrf()}); form.reset(); $("#password-dialog").close(); alert("Đã đổi mật khẩu."); }
+  try { await postJSON("/api/v1/auth/password", values, {"X-CSRF-Token": csrf()}); form.reset(); $("#password-dialog").close(); alert("Password changed."); }
   catch (error) { showFormError(form, error); }
 });
 $("#login-form").addEventListener("submit", async (event) => {

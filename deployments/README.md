@@ -1,15 +1,16 @@
 # Deployments
 
-Thư mục này chứa các định nghĩa triển khai, không chứa artifact đã build:
+This directory contains deployment definitions, not generated build artifacts:
 
-- `bundle/`: installer fresh-host, Compose và Docker build context dùng trong
-  release bundle.
-- `docker/`: Dockerfiles và Compose manifests phục vụ phát triển/đánh giá.
-- `systemd/`: socket, service và tmpfiles definition cho privileged agent.
+- `bundle/`: fresh-host installer, Compose definition, and Docker build context
+  included in a release bundle.
+- `docker/`: Dockerfiles and Compose definitions for development and review.
+- `systemd/`: socket, service, and tmpfiles definitions for the privileged
+  agent.
 
-Chạy `make -C src bundle` từ thư mục gốc để kết hợp source với các definition
-này. Bundle đầu ra được ghi vào `build/releases/`.
+Run `make -C src bundle` from the repository root to combine the source with
+these definitions. Generated bundles are written to `build/releases/`.
 
-Hướng dẫn cài bundle nằm tại [`bundle/DEPLOY_VI.md`](bundle/DEPLOY_VI.md).
-Môi trường test macOS/Multipass hiện tại được ghi lại tại
-[`../docs/MULTIPASS_LAB_VI.md`](../docs/MULTIPASS_LAB_VI.md).
+See [`bundle/DEPLOY.md`](bundle/DEPLOY.md) for the bundle installation and
+operations runbook. The current macOS/Multipass test environment is documented
+in [`../docs/MULTIPASS_LAB_VI.md`](../docs/MULTIPASS_LAB_VI.md).
