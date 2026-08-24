@@ -12,5 +12,4 @@ Run `make -C src bundle` from the repository root to combine the source with
 these definitions. Generated bundles are written to `build/releases/`.
 
 See [`bundle/DEPLOY.md`](bundle/DEPLOY.md) for the bundle installation and
-operations runbook. The current macOS/Multipass test environment is documented
-in [`../docs/MULTIPASS_LAB_VI.md`](../docs/MULTIPASS_LAB_VI.md).
+operations runbook.

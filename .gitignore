@@ -3,6 +3,8 @@
 .vscode/
 .runtime/
 coverage/
+docs/*
+!docs/.gitkeep
 build/*
 !build/.gitkeep
 *.db

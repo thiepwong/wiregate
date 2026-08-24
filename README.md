@@ -7,8 +7,8 @@ Docker. The current phase is adopt-only: WireGate discovers an existing
 configuration file, and then manages both imported and newly created peers.
 
 > WireGate is currently a technical POC. Use it in a test environment first,
-> keep a verified backup of `/etc/wireguard`, and review the remaining
-> production gates in [`docs/README.md`](docs/README.md).
+> keep a verified backup of `/etc/wireguard`, and complete the remaining
+> integration and production-readiness gates before production use.
 
 ## Repository layout
 
@@ -75,8 +75,8 @@ build/bin/wiregate-web
 
 The agent requires Linux networking APIs and root privileges. A binary built
 on macOS is useful as a compile check, but it cannot manage the host's
-WireGuard interfaces. Use a Linux host or the Multipass lab described in
-[`docs/MULTIPASS_LAB_VI.md`](docs/MULTIPASS_LAB_VI.md) for end-to-end testing.
+WireGuard interfaces. Use a Linux host or a local Linux virtual machine for
+end-to-end testing.
 
 ## Build Linux release bundles
 
@@ -180,14 +180,11 @@ must remain active throughout adoption.
 For backup, uninstall, and upgrade procedures, see
 [`deployments/bundle/DEPLOY.md`](deployments/bundle/DEPLOY.md).
 
-## Further documentation
+## Documentation
 
-- [`docs/00_START_HERE.md`](docs/00_START_HERE.md): documentation entry point.
-- [`docs/ADOPT_ONLY_PHASE_VI.md`](docs/ADOPT_ONLY_PHASE_VI.md): adopt-only phase
-  analysis and acceptance evidence.
-- [`docs/WIREGATE_SOLUTION.md`](docs/WIREGATE_SOLUTION.md): solution design.
-- [`docs/MULTIPASS_LAB_VI.md`](docs/MULTIPASS_LAB_VI.md): macOS/Multipass test
-  environment runbook.
+The `docs/` directory is reserved for reviewed public documentation. Internal
+design analysis and review notes are intentionally excluded from the public
+repository.
 
 ## License
 
