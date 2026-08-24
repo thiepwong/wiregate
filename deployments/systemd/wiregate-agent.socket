@@ -1,3 +1,10 @@
+# File: deployments/systemd/wiregate-agent.socket
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate systemd unit definition.
+
 [Unit]
 Description=WireGate Agent Socket
 

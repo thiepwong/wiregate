@@ -1,3 +1,10 @@
+# File: deployments/docker/Dockerfile.agent
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate container image definition.
+
 FROM golang:1.26.5-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./

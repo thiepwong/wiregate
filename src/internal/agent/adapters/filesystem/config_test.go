@@ -1,3 +1,10 @@
+// File: src/internal/agent/adapters/filesystem/config_test.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate automated tests.
+
 package filesystem
 
 import (

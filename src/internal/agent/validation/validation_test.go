@@ -1,3 +1,10 @@
+// File: src/internal/agent/validation/validation_test.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate automated tests.
+
 package validation
 
 import (

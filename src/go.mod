@@ -1,3 +1,10 @@
+// File: src/go.mod
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate Go module definition.
+
 module github.com/wiregate-project/wiregate
 
 go 1.26.0

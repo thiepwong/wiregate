@@ -1,3 +1,10 @@
+// File: src/api/proto/wiregate/v1/peer.proto
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate Protocol Buffers API definition.
+
 syntax = "proto3";
 
 package wiregate.v1;

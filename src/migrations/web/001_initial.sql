@@ -1,3 +1,10 @@
+-- File: src/migrations/web/001_initial.sql
+-- Project: WireGate
+-- Author: Thiep Wong
+-- Email: thiep.wong@gmail.com
+-- Date: 2026-08-24
+-- Description: WireGate database migration.
+
 CREATE TABLE users (
     id                   TEXT PRIMARY KEY,
     username             TEXT NOT NULL UNIQUE COLLATE NOCASE,

@@ -1,3 +1,13 @@
+/*
+ * File: src/internal/web/httpapi/ui/app.js
+ * Project: WireGate
+ * Author: Thiep Wong
+ * Email: thiep.wong@gmail.com
+ * Date: 2026-08-24
+ * Description: WireGate web UI client logic.
+
+ */
+
 const $ = (selector, root = document) => root.querySelector(selector);
 const csrf = () => sessionStorage.getItem("wiregate-csrf") || "";
 const requestKey = () => crypto.randomUUID();

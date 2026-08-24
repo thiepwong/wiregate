@@ -1,4 +1,12 @@
 #!/bin/sh
+
+# File: deployments/bundle/uninstall.sh
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate build or deployment script.
+
 set -eu
 
 PURGE=0

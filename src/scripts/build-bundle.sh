@@ -1,4 +1,12 @@
 #!/bin/sh
+
+# File: src/scripts/build-bundle.sh
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate build or deployment script.
+
 set -eu
 
 SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)

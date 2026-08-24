@@ -1,3 +1,10 @@
+# File: src/buf.gen.yaml
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate configuration or deployment definition.
+
 version: v2
 plugins:
   - local: ../build/tools/bin/protoc-gen-go

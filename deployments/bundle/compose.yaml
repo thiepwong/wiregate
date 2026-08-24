@@ -1,3 +1,10 @@
+# File: deployments/bundle/compose.yaml
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate configuration or deployment definition.
+
 services:
   wiregate-web:
     image: ${WIREGATE_WEB_IMAGE:?WIREGATE_WEB_IMAGE is required}

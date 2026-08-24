@@ -1,3 +1,10 @@
+// File: src/internal/agent/repository/peer_store.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate source code.
+
 package repository
 
 import (

@@ -1,3 +1,10 @@
+-- File: src/migrations/agent/001_initial.sql
+-- Project: WireGate
+-- Author: Thiep Wong
+-- Email: thiep.wong@gmail.com
+-- Date: 2026-08-24
+-- Description: WireGate database migration.
+
 CREATE TABLE system_state (
     singleton_id         INTEGER PRIMARY KEY CHECK (singleton_id = 1),
     gateway_id           TEXT NOT NULL UNIQUE,

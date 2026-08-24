@@ -1,3 +1,10 @@
+// File: src/cmd/wiregate-smoke/main.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate source code.
+
 // Command wiregate-smoke exercises the privileged agent contract in a Linux
 // lab. It is intentionally excluded from release bundles and must run as the
 // configured web UID so Unix peer-credential authorization is still enforced.

@@ -1,3 +1,10 @@
+// File: src/internal/web/repository/repository_test.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate automated tests.
+
 package repository
 
 import (

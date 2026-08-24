@@ -1,3 +1,10 @@
+// File: src/internal/agent/secret/envelope_test.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate automated tests.
+
 package secret
 
 import (

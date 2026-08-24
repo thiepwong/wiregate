@@ -1,3 +1,10 @@
+# File: src/config/web.example.yaml
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate configuration or deployment definition.
+
 # Container deployment must listen on all container interfaces so Docker's
 # published port can reach it. TLS is mandatory for non-loopback listeners.
 listen_address: "0.0.0.0:8443"

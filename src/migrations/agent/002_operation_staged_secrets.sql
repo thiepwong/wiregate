@@ -1,3 +1,10 @@
+-- File: src/migrations/agent/002_operation_staged_secrets.sql
+-- Project: WireGate
+-- Author: Thiep Wong
+-- Email: thiep.wong@gmail.com
+-- Date: 2026-08-24
+-- Description: WireGate database migration.
+
 CREATE TABLE operation_staged_secrets (
     operation_id                TEXT NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
     secret_envelope_id          TEXT NOT NULL UNIQUE REFERENCES secret_envelopes(id) ON DELETE CASCADE,

@@ -1,3 +1,10 @@
+-- File: src/migrations/agent/003_control_plane.sql
+-- Project: WireGate
+-- Author: Thiep Wong
+-- Email: thiep.wong@gmail.com
+-- Date: 2026-08-24
+-- Description: WireGate database migration.
+
 ALTER TABLE interfaces ADD COLUMN listen_port INTEGER;
 ALTER TABLE interfaces ADD COLUMN public_key TEXT;
 ALTER TABLE interfaces ADD COLUMN auto_start INTEGER NOT NULL DEFAULT 0

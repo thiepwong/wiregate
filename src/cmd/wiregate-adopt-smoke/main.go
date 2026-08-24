@@ -1,3 +1,10 @@
+// File: src/cmd/wiregate-adopt-smoke/main.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate source code.
+
 // Command wiregate-adopt-smoke validates the adopt-only control path against
 // an existing wg-quick interface. It is a lab tool and is not shipped in the
 // release bundle.

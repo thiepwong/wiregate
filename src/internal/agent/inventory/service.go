@@ -1,3 +1,10 @@
+// File: src/internal/agent/inventory/service.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate source code.
+
 package inventory
 
 import (

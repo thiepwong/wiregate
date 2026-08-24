@@ -1,5 +1,12 @@
 //go:build !linux
 
+// File: src/internal/agent/adapters/netlink/source_other.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate source code.
+
 package netlink
 
 import (

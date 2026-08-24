@@ -1,3 +1,10 @@
+# File: src/config/agent.example.yaml
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate configuration or deployment definition.
+
 gateway_id: "01900000-0000-7000-8000-000000000001"
 socket_path: "/run/wiregate/agent.sock"
 database_path: "/var/lib/wiregate-agent/agent.db"

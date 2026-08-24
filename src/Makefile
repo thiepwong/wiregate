@@ -1,3 +1,10 @@
+# File: src/Makefile
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate build automation.
+
 SHELL := /bin/sh
 WORKSPACE_DIR := $(abspath $(CURDIR)/..)
 BUILD_DIR := $(WORKSPACE_DIR)/build
@@ -11,7 +18,10 @@ PROTOC_GEN_GO_VERSION := v1.36.11
 PROTOC_GEN_GO_GRPC_VERSION := v1.6.2
 export BUF_CACHE_DIR GOMODCACHE GOCACHE
 
-.PHONY: tools deps generate fmt lint test build check bundle clean
+.PHONY: headers tools deps generate fmt lint test build check bundle clean
+
+headers:
+	./scripts/check-headers.sh
 
 tools: $(TOOLS_DIR)/protoc-gen-go $(TOOLS_DIR)/protoc-gen-go-grpc
 
@@ -44,7 +54,7 @@ build:
 	go build -trimpath -o $(BIN_DIR)/wiregate-agent ./cmd/wiregate-agent
 	go build -trimpath -o $(BIN_DIR)/wiregate-web ./cmd/wiregate-web
 
-check: generate fmt lint test build
+check: headers generate fmt lint test build
 
 bundle: check
 	./scripts/build-bundle.sh

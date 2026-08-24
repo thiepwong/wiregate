@@ -1,3 +1,10 @@
+-- File: src/migrations/agent/004_adoption_import.sql
+-- Project: WireGate
+-- Author: Thiep Wong
+-- Email: thiep.wong@gmail.com
+-- Date: 2026-08-24
+-- Description: WireGate database migration.
+
 CREATE TABLE adoption_import_ledger (
     operation_id   TEXT NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
     resource_kind TEXT NOT NULL CHECK (resource_kind IN (

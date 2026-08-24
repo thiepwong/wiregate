@@ -1,3 +1,13 @@
+/*
+ * File: src/internal/web/httpapi/ui/app.css
+ * Project: WireGate
+ * Author: Thiep Wong
+ * Email: thiep.wong@gmail.com
+ * Date: 2026-08-24
+ * Description: WireGate web UI styles.
+
+ */
+
 :root {
   color-scheme: dark;
   --bg: #0b1110;

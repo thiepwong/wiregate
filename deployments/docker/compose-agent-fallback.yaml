@@ -1,3 +1,10 @@
+# File: deployments/docker/compose-agent-fallback.yaml
+# Project: WireGate
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-08-24
+# Description: WireGate configuration or deployment definition.
+
 services:
   wiregate-agent:
     image: ${WIREGATE_AGENT_IMAGE:?set WIREGATE_AGENT_IMAGE to an immutable digest}

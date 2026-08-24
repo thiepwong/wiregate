@@ -1,3 +1,10 @@
+// File: src/internal/agent/secret/envelope.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate source code.
+
 // Package secret owns WireGate secret encryption. It intentionally exposes
 // byte slices rather than string formatting helpers so secret values are not
 // accidentally included in logs.

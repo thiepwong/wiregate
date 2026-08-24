@@ -1,3 +1,10 @@
+// File: src/internal/agent/configdoc/document.go
+// Project: WireGate
+// Author: Thiep Wong
+// Email: thiep.wong@gmail.com
+// Date: 2026-08-24
+// Description: WireGate source code.
+
 // Package configdoc implements the line-preserving wg-quick document model.
 //
 // The package deliberately separates the raw document from the redacted
