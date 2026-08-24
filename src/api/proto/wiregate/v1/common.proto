@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package wiregate.v1;
+
+option go_package = "github.com/wiregate-project/wiregate/gen/wiregate/v1;wiregatev1";
+
+message Empty {}
+
+message ActorContext {
+  string actor_id = 1;
+  string actor_role = 2;
+  string request_id = 3;
+  string permission = 4;
+  optional string reauth_evidence_id = 5;
+}
+
+message MutationContext {
+  ActorContext actor = 1;
+  string idempotency_key = 2;
+  optional int64 expected_revision = 3;
+  optional string reason = 4;
+}
+
+message OperationRef {
+  string operation_id = 1;
+  string state = 2;
+  int64 interface_revision = 3;
+  bool effective_on_next_start = 4;
+}
+

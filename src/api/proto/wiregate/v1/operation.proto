@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package wiregate.v1;
+
+import "wiregate/v1/common.proto";
+
+option go_package = "github.com/wiregate-project/wiregate/gen/wiregate/v1;wiregatev1";
+
+message ValidationIssue {
+  string code = 1;
+  string severity = 2;
+  string field = 3;
+  string summary = 4;
+  string remediation = 5;
+}
+
+message OperationPlan {
+  string operation_id = 1;
+  string operation_type = 2;
+  string base_file_hash = 3;
+  int64 base_revision = 4;
+  repeated ValidationIssue issues = 5;
+  string semantic_diff_json = 6;
+  string textual_diff_redacted = 7;
+  bool disruptive = 8;
+  int64 expires_at_ms = 9;
+}
+
+message CommitOperationRequest {
+  MutationContext context = 1;
+  string operation_id = 2;
+}
+
+message OperationStepView {
+  string id = 1;
+  int32 step_order = 2;
+  string name = 3;
+  string state = 4;
+  string effect_kind = 5;
+  string error_redacted = 6;
+}
+
+message OperationView {
+  string id = 1;
+  string interface_id = 2;
+  string operation_type = 3;
+  string state = 4;
+  int64 expected_revision = 5;
+  string proposed_diff_json = 6;
+  string error_code = 7;
+  string error_message_redacted = 8;
+  int64 created_at_ms = 9;
+  int64 updated_at_ms = 10;
+  int64 finished_at_ms = 11;
+  repeated OperationStepView steps = 12;
+}
+
+message GetOperationRequest {
+  string operation_id = 1;
+}
+
+message GetOperationResponse {
+  OperationView operation = 1;
+}
+
+message ListOperationsRequest {
+  optional string interface_id = 1;
+  optional string state = 2;
+  int32 page_size = 3;
+  optional string page_token = 4;
+}
+
+message ListOperationsResponse {
+  repeated OperationView operations = 1;
+  string next_page_token = 2;
+}
+
+message PreviewRollbackOperationRequest {
+  MutationContext context = 1;
+  string operation_id = 2;
+}

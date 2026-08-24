@@ -1,0 +1,15 @@
+gateway_id: "01900000-0000-7000-8000-000000000001"
+socket_path: "/run/wiregate/agent.sock"
+database_path: "/var/lib/wiregate-agent/agent.db"
+key_dir: "/etc/wiregate/keys"
+wireguard_config_dir: "/etc/wireguard"
+allowed_interfaces:
+  - "*"
+# Installer replaces these with the fixed web-container UID and primary GID.
+allowed_peer_uid: 10001
+allowed_peer_gid: 10001
+runtime_poll_interval: 5s
+file_scan_interval: 30s
+operation_timeout: 30s
+artifact_ttl: 10m
+ip_quarantine_duration: 24h

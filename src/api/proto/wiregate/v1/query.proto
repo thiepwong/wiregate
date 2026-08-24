@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package wiregate.v1;
+
+import "wiregate/v1/artifact.proto";
+import "wiregate/v1/common.proto";
+import "wiregate/v1/diagnostics.proto";
+import "wiregate/v1/interface.proto";
+import "wiregate/v1/operation.proto";
+import "wiregate/v1/peer.proto";
+
+option go_package = "github.com/wiregate-project/wiregate/gen/wiregate/v1;wiregatev1";
+
+message GetAgentInfoRequest {}
+
+message AgentInfo {
+  string version = 1;
+  string gateway_id = 2;
+  string hostname = 3;
+  string platform = 4;
+  int32 schema_version = 5;
+  bool read_only = 6;
+  int64 started_at_ms = 7;
+}
+
+message GetAgentInfoResponse {
+  AgentInfo agent = 1;
+}
+
+message RefreshInventoryRequest {}
+
+message RefreshInventoryResponse {
+  int32 interface_count = 1;
+  int32 peer_count = 2;
+  int64 refreshed_at_ms = 3;
+}
+
+service WireGateAgentService {
+  rpc GetAgentInfo(GetAgentInfoRequest) returns (GetAgentInfoResponse);
+  rpc ListInterfaces(ListInterfacesRequest) returns (ListInterfacesResponse);
+  rpc GetInterface(GetInterfaceRequest) returns (GetInterfaceResponse);
+  rpc ListPeers(ListPeersRequest) returns (ListPeersResponse);
+  rpc RefreshInventory(RefreshInventoryRequest) returns (RefreshInventoryResponse);
+
+  rpc PreviewAdoption(PreviewAdoptionRequest) returns (OperationPlan);
+  rpc CommitAdoption(CommitOperationRequest) returns (OperationRef);
+  rpc PreviewResolveDrift(PreviewResolveDriftRequest) returns (OperationPlan);
+  rpc ResolveDrift(CommitOperationRequest) returns (OperationRef);
+
+  rpc PreviewCreateInterface(PreviewCreateInterfaceRequest) returns (OperationPlan);
+  rpc CreateInterface(CommitOperationRequest) returns (OperationRef);
+  rpc PreviewSetInterfaceState(PreviewSetInterfaceStateRequest) returns (OperationPlan);
+  rpc SetInterfaceState(CommitOperationRequest) returns (OperationRef);
+
+  rpc PreviewCreatePeer(PreviewCreatePeerRequest) returns (OperationPlan);
+  rpc CreatePeer(CommitOperationRequest) returns (CreatePeerResponse);
+  rpc PreviewUpdatePeer(PreviewUpdatePeerRequest) returns (OperationPlan);
+  rpc UpdatePeer(CommitOperationRequest) returns (OperationRef);
+  rpc PreviewPeerMutation(PreviewPeerMutationRequest) returns (OperationPlan);
+  rpc DisablePeer(CommitOperationRequest) returns (OperationRef);
+  rpc EnablePeer(CommitOperationRequest) returns (OperationRef);
+  rpc RevokePeer(CommitOperationRequest) returns (OperationRef);
+
+  rpc PrepareReenroll(PrepareReenrollRequest) returns (ReenrollPlan);
+  rpc CommitReenroll(CommitReenrollRequest) returns (OperationRef);
+
+  rpc ExportClientArtifact(ExportClientArtifactRequest) returns (stream ArtifactChunk);
+  rpc ConsumeOneTimeArtifact(ConsumeOneTimeArtifactRequest) returns (stream ArtifactChunk);
+
+  rpc GetOperation(GetOperationRequest) returns (GetOperationResponse);
+  rpc ListOperations(ListOperationsRequest) returns (ListOperationsResponse);
+  rpc PreviewRollbackOperation(PreviewRollbackOperationRequest) returns (OperationPlan);
+  rpc RollbackOperation(CommitOperationRequest) returns (OperationRef);
+  rpc GetDiagnostics(GetDiagnosticsRequest) returns (GetDiagnosticsResponse);
+}

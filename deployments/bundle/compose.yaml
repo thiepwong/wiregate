@@ -1,0 +1,28 @@
+services:
+  wiregate-web:
+    image: ${WIREGATE_WEB_IMAGE:?WIREGATE_WEB_IMAGE is required}
+    pull_policy: never
+    restart: unless-stopped
+    user: "${WIREGATE_WEB_UID:?}:${WIREGATE_WEB_GID:?}"
+    ports:
+      - "${WIREGATE_BIND_ADDRESS:-0.0.0.0}:${WIREGATE_WEB_PORT:-8443}:8443/tcp"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    pids_limit: 128
+    stop_grace_period: 15s
+    tmpfs:
+      - /tmp:size=32m,mode=1777,noexec,nosuid,nodev
+    volumes:
+      - /var/lib/wiregate-web:/var/lib/wiregate-web
+      - /run/wiregate:/run/wiregate:ro
+      - /etc/wiregate-web/web.yaml:/etc/wiregate/web.yaml:ro
+      - /etc/wiregate-web/tls:/etc/wiregate-web/tls:ro
+    healthcheck:
+      test: ["CMD", "/wiregate-web", "healthcheck", "-config", "/etc/wiregate/web.yaml"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s

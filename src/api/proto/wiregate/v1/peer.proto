@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package wiregate.v1;
+
+import "wiregate/v1/common.proto";
+import "wiregate/v1/operation.proto";
+
+option go_package = "github.com/wiregate-project/wiregate/gen/wiregate/v1;wiregatev1";
+
+message PeerView {
+  string id = 1;
+  string interface_id = 2;
+  string name = 3;
+  string public_key = 4;
+  string lifecycle_state = 5;
+  string endpoint = 6;
+  int32 persistent_keepalive_seconds = 7;
+  repeated string allowed_ips = 8;
+  int64 latest_handshake_at_ms = 9;
+  uint64 transfer_rx_bytes = 10;
+  uint64 transfer_tx_bytes = 11;
+  string activity_state = 12;
+  int64 runtime_seen_at_ms = 13;
+  string key_mode = 14;
+}
+
+message ListPeersRequest {
+  string interface_id = 1;
+}
+
+message ListPeersResponse {
+  repeated PeerView peers = 1;
+}
+
+message PreviewCreatePeerRequest {
+  MutationContext context = 1;
+  string interface_id = 2;
+  string name = 3;
+  string key_mode = 4;
+  optional string external_public_key = 5;
+  repeated string server_allowed_ips = 6;
+  repeated string client_routes = 7;
+  repeated string dns = 8;
+  optional uint32 mtu = 9;
+  optional string endpoint_host = 10;
+  optional uint32 endpoint_port = 11;
+  optional uint32 persistent_keepalive_seconds = 12;
+  bool use_preshared_key = 13;
+}
+
+message CreatePeerResponse {
+  OperationRef operation = 1;
+  PeerView peer = 2;
+  optional string one_time_artifact_id = 3;
+  optional bytes one_time_token = 4;
+}
+
+message PreviewUpdatePeerRequest {
+  MutationContext context = 1;
+  string peer_id = 2;
+  optional string name = 3;
+  repeated string server_allowed_ips = 4;
+  repeated string client_routes = 5;
+  optional string endpoint = 6;
+  optional uint32 persistent_keepalive_seconds = 7;
+}
+
+message PreviewPeerMutationRequest {
+  MutationContext context = 1;
+  string peer_id = 2;
+  string mutation = 3;
+}
+
+message PrepareReenrollRequest {
+  MutationContext context = 1;
+  string peer_id = 2;
+  string key_mode = 3;
+  bool preserve_tunnel_address = 4;
+}
+
+message ReenrollPlan {
+  OperationPlan operation = 1;
+  string replacement_peer_id = 2;
+  bool requires_atomic_cutover = 3;
+}
+
+message CommitReenrollRequest {
+  MutationContext context = 1;
+  string operation_id = 2;
+  bool confirm_cutover = 3;
+}

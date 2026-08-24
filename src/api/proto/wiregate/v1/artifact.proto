@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package wiregate.v1;
+
+import "wiregate/v1/common.proto";
+
+option go_package = "github.com/wiregate-project/wiregate/gen/wiregate/v1;wiregatev1";
+
+enum ArtifactFormat {
+  ARTIFACT_FORMAT_UNSPECIFIED = 0;
+  ARTIFACT_FORMAT_WIREGUARD_CONF = 1;
+  ARTIFACT_FORMAT_QR_PNG = 2;
+}
+
+message ExportClientArtifactRequest {
+  ActorContext actor = 1;
+  string peer_id = 2;
+  ArtifactFormat format = 3;
+  string idempotency_key = 4;
+}
+
+message ConsumeOneTimeArtifactRequest {
+  ActorContext actor = 1;
+  bytes token = 2;
+  ArtifactFormat format = 3;
+}
+
+message ArtifactChunk {
+  bytes data = 1;
+  string content_type = 2;
+  string filename = 3;
+}

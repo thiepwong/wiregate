@@ -1,0 +1,12 @@
+FROM golang:1.26.5-bookworm AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/wiregate-agent ./cmd/wiregate-agent
+
+FROM gcr.io/distroless/static-debian12
+COPY --from=build /out/wiregate-agent /wiregate-agent
+USER 0:0
+ENTRYPOINT ["/wiregate-agent"]
+CMD ["-config", "/etc/wiregate/agent.yaml"]

@@ -1,0 +1,15 @@
+FROM golang:1.26.5-bookworm AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/wiregate-web ./cmd/wiregate-web \
+    && mkdir -p /out/web-data
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/wiregate-web /wiregate-web
+COPY --from=build --chown=10001:10001 /out/web-data /var/lib/wiregate-web
+USER 10001:10001
+EXPOSE 8443
+ENTRYPOINT ["/wiregate-web"]
+CMD ["-config", "/etc/wiregate/web.yaml"]

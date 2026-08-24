@@ -1,0 +1,20 @@
+services:
+  wiregate-agent:
+    image: ${WIREGATE_AGENT_IMAGE:?set WIREGATE_AGENT_IMAGE to an immutable digest}
+    network_mode: host
+    restart: unless-stopped
+    user: "0:0"
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    volumes:
+      - /etc/wireguard:/etc/wireguard:rw
+      - /etc/wiregate:/etc/wiregate:rw
+      - /var/lib/wiregate-agent:/var/lib/wiregate-agent:rw
+      - /run/wiregate:/run/wiregate:rw

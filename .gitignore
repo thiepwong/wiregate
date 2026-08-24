@@ -1,0 +1,14 @@
+.DS_Store
+.idea/
+.vscode/
+.runtime/
+coverage/
+build/*
+!build/.gitkeep
+*.db
+*.db-shm
+*.db-wal
+*.sock
+*.tmp
+src/webui/node_modules/
+src/webui/dist/

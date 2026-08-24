@@ -1,0 +1,7 @@
+# Container deployment must listen on all container interfaces so Docker's
+# published port can reach it. TLS is mandatory for non-loopback listeners.
+listen_address: "0.0.0.0:8443"
+agent_socket: "/run/wiregate/agent.sock"
+database_path: "/var/lib/wiregate-web/web.db"
+tls_cert_file: "/etc/wiregate-web/tls/tls.crt"
+tls_key_file: "/etc/wiregate-web/tls/tls.key"

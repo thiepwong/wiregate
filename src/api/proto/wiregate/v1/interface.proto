@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package wiregate.v1;
+
+import "wiregate/v1/common.proto";
+
+option go_package = "github.com/wiregate-project/wiregate/gen/wiregate/v1;wiregatev1";
+
+enum InterfaceBackend {
+  INTERFACE_BACKEND_UNSPECIFIED = 0;
+  INTERFACE_BACKEND_WG_QUICK = 1;
+  INTERFACE_BACKEND_RUNTIME_ONLY = 2;
+  INTERFACE_BACKEND_NETWORK_MANAGER = 3;
+  INTERFACE_BACKEND_NETWORKD = 4;
+  INTERFACE_BACKEND_CONTAINER = 5;
+  INTERFACE_BACKEND_UNKNOWN = 6;
+}
+
+enum ManagementMode {
+  MANAGEMENT_MODE_UNSPECIFIED = 0;
+  MANAGEMENT_MODE_OBSERVED = 1;
+  MANAGEMENT_MODE_ADOPTED = 2;
+  MANAGEMENT_MODE_MANAGED = 3;
+  MANAGEMENT_MODE_UNSUPPORTED = 4;
+}
+
+enum DriftState {
+  DRIFT_STATE_UNSPECIFIED = 0;
+  DRIFT_STATE_NONE = 1;
+  DRIFT_STATE_FILE = 2;
+  DRIFT_STATE_RUNTIME = 3;
+  DRIFT_STATE_BOTH = 4;
+  DRIFT_STATE_SECRET = 5;
+  DRIFT_STATE_UNKNOWN = 6;
+}
+
+message InterfaceAddress {
+  int32 family = 1;
+  string address = 2;
+  int32 prefix_length = 3;
+  string source = 4;
+}
+
+message InterfaceView {
+  string id = 1;
+  string name = 2;
+  InterfaceBackend backend = 3;
+  ManagementMode management_mode = 4;
+  string config_path = 5;
+  string service_unit = 6;
+  string file_hash = 7;
+  string runtime_fingerprint = 8;
+  int64 revision = 9;
+  DriftState drift_state = 10;
+  bool runtime_present = 11;
+  bool config_present = 12;
+  repeated InterfaceAddress addresses = 13;
+  int32 peer_count = 14;
+  int64 updated_at_ms = 15;
+  uint32 listen_port = 16;
+  string public_key = 17;
+  string deployment_profile = 18;
+  string firewall_mode = 19;
+  bool auto_start = 20;
+  string service_state = 21;
+}
+
+message ListInterfacesRequest {}
+
+message ListInterfacesResponse {
+  repeated InterfaceView interfaces = 1;
+}
+
+message GetInterfaceRequest {
+  string interface_id = 1;
+}
+
+message GetInterfaceResponse {
+  InterfaceView interface = 1;
+}
+
+message PreviewAdoptionRequest {
+  MutationContext context = 1;
+  string interface_id = 2;
+}
+
+message PreviewResolveDriftRequest {
+  MutationContext context = 1;
+  string interface_id = 2;
+  string resolution = 3;
+}
+
+message PreviewCreateInterfaceRequest {
+  MutationContext context = 1;
+  string name = 2;
+  repeated string interface_addresses = 3;
+  uint32 listen_port = 4;
+  string deployment_profile = 5;
+  string firewall_mode = 6;
+  repeated string lan_cidrs = 7;
+  string egress_device = 8;
+  bool auto_start = 9;
+}
+
+message PreviewSetInterfaceStateRequest {
+  MutationContext context = 1;
+  string interface_id = 2;
+  string desired_state = 3;
+}

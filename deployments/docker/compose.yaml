@@ -1,0 +1,27 @@
+services:
+  wiregate-web:
+    image: ${WIREGATE_WEB_IMAGE:?set WIREGATE_WEB_IMAGE to an immutable digest}
+    restart: unless-stopped
+    user: "10001:${WIREGATE_GID:?set WIREGATE_GID}"
+    ports:
+      - "8443:8443/tcp"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    volumes:
+      - wiregate-web-data:/var/lib/wiregate-web
+      - /run/wiregate:/run/wiregate:ro
+      - ./web.yaml:/etc/wiregate/web.yaml:ro
+      - ./tls:/etc/wiregate-web/tls:ro
+    healthcheck:
+      test: ["CMD", "/wiregate-web", "healthcheck", "-config", "/etc/wiregate/web.yaml"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  wiregate-web-data:

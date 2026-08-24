@@ -1,0 +1,23 @@
+[Unit]
+Description=WireGate Agent
+Requires=wiregate-agent.socket
+After=network-pre.target
+
+[Service]
+Type=notify
+ExecStart=/usr/lib/wiregate/wiregate-agent -config /etc/wiregate/agent.yaml
+User=root
+Group=root
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/etc/wireguard /etc/wiregate /etc/sysctl.d /var/lib/wiregate-agent /run/wiregate
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
+LimitCORE=0
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target

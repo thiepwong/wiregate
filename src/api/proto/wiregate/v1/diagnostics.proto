@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package wiregate.v1;
+
+option go_package = "github.com/wiregate-project/wiregate/gen/wiregate/v1;wiregatev1";
+
+message DiagnosticIssue {
+  string code = 1;
+  string severity = 2;
+  string summary = 3;
+  string remediation = 4;
+}
+
+message DiagnosticsView {
+  bool database_ready = 1;
+  bool config_root_ready = 2;
+  bool runtime_source_ready = 3;
+  bool address_source_ready = 4;
+  int64 last_refresh_at_ms = 5;
+  string last_refresh_error = 6;
+  repeated DiagnosticIssue issues = 7;
+}
+
+message GetDiagnosticsRequest {}
+
+message GetDiagnosticsResponse {
+  DiagnosticsView diagnostics = 1;
+}

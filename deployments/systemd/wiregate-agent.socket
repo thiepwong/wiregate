@@ -1,0 +1,13 @@
+[Unit]
+Description=WireGate Agent Socket
+
+[Socket]
+ListenStream=/run/wiregate/agent.sock
+SocketUser=root
+SocketGroup=wiregate
+SocketMode=0660
+DirectoryMode=0750
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target
