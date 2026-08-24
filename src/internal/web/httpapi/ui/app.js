@@ -35,10 +35,21 @@ function showAuth(message = "") {
   $("#logout").hidden = true; $("#password").hidden = true;
   $("#agent-status").textContent = "Sign-in required"; $("#agent-status").classList.remove("online");
   $("#auth-error").textContent = message; $("#auth-error").hidden = !message;
+  void refreshBootstrapVisibility();
 }
 function showApp() {
   $("#auth-view").hidden = true; $("#app-view").hidden = false;
   $("#logout").hidden = false; $("#password").hidden = false;
+  $("#bootstrap-setup").hidden = true;
+}
+async function refreshBootstrapVisibility() {
+  const setup = $("#bootstrap-setup"); setup.hidden = true;
+  try {
+    const status = await getJSON("/api/v1/auth/status");
+    setup.hidden = status.bootstrap_required !== true;
+  } catch {
+    setup.hidden = true;
+  }
 }
 function showFormError(form, error) {
   const target = $(".form-error", form); target.textContent = error.message; target.hidden = false;

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -101,6 +102,58 @@ func TestWireGuardAPIRequiresSession(t *testing.T) {
 	server.Handler().ServeHTTP(response, request)
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+}
+
+func TestAuthStatusHidesBootstrapAfterFirstAdmin(t *testing.T) {
+	ctx := context.Background()
+	store, err := repository.Open(ctx, filepath.Join(t.TempDir(), "web.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := auth.NewManager(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := New(fakeAgent{}, manager, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Handler()
+
+	statusRequest := httptest.NewRequest(http.MethodGet, "https://gateway.test/api/v1/auth/status", nil)
+	statusResponse := httptest.NewRecorder()
+	handler.ServeHTTP(statusResponse, statusRequest)
+	if statusResponse.Code != http.StatusOK || !strings.Contains(statusResponse.Body.String(), `"bootstrap_required":true`) {
+		t.Fatalf("initial status = %d, body = %s", statusResponse.Code, statusResponse.Body.String())
+	}
+
+	pageRequest := httptest.NewRequest(http.MethodGet, "https://gateway.test/", nil)
+	pageResponse := httptest.NewRecorder()
+	handler.ServeHTTP(pageResponse, pageRequest)
+	if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), `<details id="bootstrap-setup" hidden>`) {
+		t.Fatalf("login page must hide bootstrap by default: status = %d", pageResponse.Code)
+	}
+
+	now := time.Now().UTC()
+	token, tokenHash, err := auth.NewBootstrapToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SetBootstrapToken(ctx, tokenHash, now.Add(time.Minute), now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Bootstrap(
+		ctx, token, "admin", "Admin", "correct horse battery staple", "request-1",
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	statusResponse = httptest.NewRecorder()
+	handler.ServeHTTP(statusResponse, statusRequest)
+	if statusResponse.Code != http.StatusOK || !strings.Contains(statusResponse.Body.String(), `"bootstrap_required":false`) {
+		t.Fatalf("post-bootstrap status = %d, body = %s", statusResponse.Code, statusResponse.Body.String())
 	}
 }
 

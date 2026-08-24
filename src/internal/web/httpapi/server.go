@@ -75,6 +75,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
+	mux.HandleFunc("GET /api/v1/auth/status", s.authStatus)
 	mux.HandleFunc("POST /api/v1/auth/bootstrap", s.bootstrap)
 	mux.HandleFunc("POST /api/v1/auth/login", s.login)
 	mux.HandleFunc("POST /api/v1/auth/logout", s.logout)
@@ -643,6 +644,17 @@ func optionalUint32(value uint32) *uint32 {
 		return nil
 	}
 	return &value
+}
+
+func (s *Server) authStatus(w http.ResponseWriter, request *http.Request) {
+	ctx, cancel := context.WithTimeout(request.Context(), 2*time.Second)
+	defer cancel()
+	bootstrapRequired, err := s.auth.BootstrapRequired(ctx)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "authentication status unavailable"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"bootstrap_required": bootstrapRequired})
 }
 
 func mutationContext(

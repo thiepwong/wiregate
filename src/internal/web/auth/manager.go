@@ -60,6 +60,10 @@ func NewManager(repository *repository.Repository) (*Manager, error) {
 	}, nil
 }
 
+func (m *Manager) BootstrapRequired(ctx context.Context) (bool, error) {
+	return m.repository.BootstrapRequired(ctx)
+}
+
 func (m *Manager) Bootstrap(
 	ctx context.Context,
 	token, username, displayName, password, requestID string,

@@ -28,6 +28,14 @@ type Session struct {
 	ReauthUntil time.Time
 }
 
+func (r *Repository) BootstrapRequired(ctx context.Context) (bool, error) {
+	var users int
+	if err := r.database.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&users); err != nil {
+		return false, err
+	}
+	return users == 0, nil
+}
+
 func (r *Repository) SetBootstrapToken(ctx context.Context, tokenHash []byte, expiresAt, now time.Time) error {
 	if len(tokenHash) != 32 || !expiresAt.After(now) {
 		return errors.New("invalid bootstrap token or expiry")
