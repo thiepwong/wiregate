@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/wiregate-project/wiregate/internal/agent/inventory"
 	agentoperation "github.com/wiregate-project/wiregate/internal/agent/operation"
 )
 
@@ -78,6 +79,59 @@ func TestOperationIdempotencyReturnsOriginalPlan(t *testing.T) {
 	}
 	if first.ID != second.ID {
 		t.Fatalf("idempotent operation IDs differ: %s %s", first.ID, second.ID)
+	}
+}
+
+func TestNewPreviewSupersedesSameActorsAbandonedPendingPreview(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "agent.db"), testGatewayID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	if _, err := store.ReplaceInventory(ctx, inventory.Snapshot{
+		RefreshedAt: time.Now().UTC(),
+		Interfaces: []inventory.Interface{{
+			Name: "wg0", Backend: "wg_quick", ManagementMode: "observed",
+		}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	interfaces, err := store.ListInterfaces(ctx)
+	if err != nil || len(interfaces) != 1 {
+		t.Fatalf("interfaces=%#v err=%v", interfaces, err)
+	}
+	input := CreateOperationInput{
+		InterfaceID: interfaces[0].ID, Type: "set_interface_state",
+		IntentJSON: `{"desired_state":"removed"}`, IdempotencyKey: "first-preview",
+		ActorID: "admin", ActorRole: "admin", RequestID: "request-one",
+		ExpiresAt: time.Now().Add(5 * time.Minute),
+	}
+	first, err := store.CreateOperation(ctx, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input.IdempotencyKey = "replacement-preview"
+	input.RequestID = "request-two"
+	second, err := store.CreateOperation(ctx, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID == second.ID || second.State != agentoperation.StatePending {
+		t.Fatalf("first=%#v second=%#v", first, second)
+	}
+	expired, err := store.GetOperation(ctx, first.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expired.State != agentoperation.StateExpired || expired.ErrorCode != "PREVIEW_SUPERSEDED" {
+		t.Fatalf("superseded operation = %#v", expired)
+	}
+
+	input.ActorID = "another-admin"
+	input.IdempotencyKey = "other-actor-preview"
+	if _, err := store.CreateOperation(ctx, input); err == nil {
+		t.Fatal("a different actor superseded another administrator's pending preview")
 	}
 }
 

@@ -24,6 +24,8 @@ import (
 	"github.com/wiregate-project/wiregate/internal/web/agentclient"
 	"github.com/wiregate-project/wiregate/internal/web/auth"
 	"github.com/wiregate-project/wiregate/internal/web/repository"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type fakeAgent struct{}
@@ -382,5 +384,29 @@ func TestManagedInterfaceRemovalRequiresReauthentication(t *testing.T) {
 	if agent.commitRequest.GetOperationId() != "remove-operation" ||
 		agent.commitRequest.GetContext().GetActor().GetPermission() != "interface:manage" {
 		t.Fatalf("commit request = %#v", agent.commitRequest)
+	}
+}
+
+func TestWriteProtoExposesOnlyExplicitlySafeAgentMessage(t *testing.T) {
+	server := &Server{}
+	response := httptest.NewRecorder()
+	server.writeProto(response, nil, status.Error(
+		codes.FailedPrecondition,
+		"wiregate-safe-v1: The WireGuard runtime changed. Refresh and try again.",
+	))
+	if response.Code != http.StatusConflict ||
+		!strings.Contains(response.Body.String(), "The WireGuard runtime changed") {
+		t.Fatalf("safe response status=%d body=%s", response.Code, response.Body.String())
+	}
+
+	response = httptest.NewRecorder()
+	server.writeProto(response, nil, status.Error(
+		codes.FailedPrecondition,
+		"/etc/wireguard/private-path must not be exposed",
+	))
+	if response.Code != http.StatusConflict ||
+		!strings.Contains(response.Body.String(), "operation precondition failed") ||
+		strings.Contains(response.Body.String(), "private-path") {
+		t.Fatalf("unsafe response status=%d body=%s", response.Code, response.Body.String())
 	}
 }

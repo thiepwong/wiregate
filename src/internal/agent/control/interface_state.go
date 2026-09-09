@@ -63,7 +63,9 @@ func (s *Service) PreviewSetInterfaceState(
 	}
 	desiredState = strings.ToLower(strings.TrimSpace(desiredState))
 	if desiredState != removedInterfaceState {
-		return Preview{}, fmt.Errorf("%w: unsupported interface state", ErrInvalid)
+		return Preview{}, operatorError(
+			ErrInvalid, nil, "Only removal is supported for this interface action.",
+		)
 	}
 	record, err := s.preflightManagedRemoval(ctx, interfaceID, expectedRevision)
 	if err != nil {
@@ -90,7 +92,10 @@ func (s *Service) PreviewSetInterfaceState(
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "already") {
-			return Preview{}, fmt.Errorf("%w: operation already in progress", ErrConflict)
+			return Preview{}, operatorError(
+				ErrConflict, err,
+				"Another operation is already active for this interface. Refresh and try again; a pending preview from this administrator will be replaced automatically.",
+			)
 		}
 		return Preview{}, err
 	}
@@ -130,7 +135,9 @@ func (s *Service) CommitSetInterfaceState(
 	var intent interfaceStateIntent
 	if err := json.Unmarshal([]byte(metadata.IntentJSON), &intent); err != nil ||
 		intent.InterfaceID == "" || intent.DesiredState != removedInterfaceState {
-		return Result{}, fmt.Errorf("%w: invalid interface-state intent", ErrInvalid)
+		return Result{}, operatorError(
+			ErrInvalid, err, "The removal preview is invalid. Refresh the page and create a new preview.",
+		)
 	}
 	if metadata.State == agentoperation.StateCommitted {
 		revision := int64(0)
@@ -140,9 +147,19 @@ func (s *Service) CommitSetInterfaceState(
 		return Result{OperationID: operationID, State: metadata.State,
 			InterfaceID: intent.InterfaceID, InterfaceRevision: revision}, nil
 	}
-	if metadata.State != agentoperation.StatePending || metadata.ExpectedRevision == nil ||
-		agentoperation.PreviewExpired(metadata.ExpiresAt, s.now()) {
-		return Result{}, fmt.Errorf("%w: preview is no longer committable", ErrConflict)
+	if metadata.State != agentoperation.StatePending || metadata.ExpectedRevision == nil {
+		return Result{}, operatorError(
+			ErrConflict, nil, "This removal preview is no longer pending. Refresh and try again.",
+		)
+	}
+	if agentoperation.PreviewExpired(metadata.ExpiresAt, s.now()) {
+		_ = s.repository.TransitionOperation(
+			ctx, operationID, agentoperation.StatePending, agentoperation.StateExpired,
+			&agentoperation.Failure{Code: "PREVIEW_EXPIRED", Message: "interface removal preview expired"},
+		)
+		return Result{}, operatorError(
+			ErrConflict, nil, "This removal preview expired. Refresh and try again.",
+		)
 	}
 
 	unlock, err := s.lockInterfaceName(ctx, intent.InterfaceID)
@@ -157,12 +174,21 @@ func (s *Service) CommitSetInterfaceState(
 	if err := s.repository.TransitionOperation(
 		ctx, operationID, agentoperation.StatePending, agentoperation.StateValidated, nil,
 	); err != nil {
-		return Result{}, fmt.Errorf("%w: operation state changed", ErrConflict)
+		return Result{}, operatorError(
+			ErrConflict, err, "The interface operation changed concurrently. Refresh and try again.",
+		)
 	}
 	snapshot, err := s.buildInterfaceRemovalSnapshot(ctx, record, intent)
 	if err != nil {
 		s.rejectValidated(ctx, operationID, "INTERFACE_REMOVAL_SNAPSHOT_FAILED")
-		return Result{}, err
+		var actionable interface{ PublicMessage() string }
+		if errors.As(err, &actionable) {
+			return Result{}, err
+		}
+		return Result{}, operatorError(
+			ErrPrecondition, err,
+			"WireGate could not verify the rollback data for this interface. Check the agent journal and refresh before retrying.",
+		)
 	}
 	defer wipeInterfaceRemovalSnapshot(&snapshot)
 	payload, err := json.Marshal(snapshot)
@@ -197,7 +223,10 @@ func (s *Service) CommitSetInterfaceState(
 		return Result{}, errors.Join(err, s.rollbackInterfaceRemoval(ctx, operationID, &snapshot))
 	}
 	if err := s.removeManagedInterfaceHost(ctx, record, &snapshot); err != nil {
-		return Result{}, errors.Join(err, s.rollbackInterfaceRemoval(ctx, operationID, &snapshot))
+		return Result{}, errors.Join(operatorError(
+			ErrPrecondition, err,
+			"WireGate could not stop or remove all owned host resources. It attempted to restore the interface; check the agent journal before retrying.",
+		), s.rollbackInterfaceRemoval(ctx, operationID, &snapshot))
 	}
 	if err := s.repository.TransitionOperation(
 		ctx, operationID, agentoperation.StateExecuting, agentoperation.StateVerifying, nil,
@@ -205,7 +234,10 @@ func (s *Service) CommitSetInterfaceState(
 		return Result{}, errors.Join(err, s.rollbackInterfaceRemoval(ctx, operationID, &snapshot))
 	}
 	if _, _, err := s.repository.FinalizeManagedInterfaceRemoval(ctx, operationID); err != nil {
-		return Result{}, errors.Join(err, s.rollbackInterfaceRemoval(ctx, operationID, &snapshot))
+		return Result{}, errors.Join(operatorError(
+			ErrConflict, err,
+			"The host change could not be committed to WireGate metadata, so the interface was restored. Refresh and try again.",
+		), s.rollbackInterfaceRemoval(ctx, operationID, &snapshot))
 	}
 	return Result{
 		OperationID: operationID, State: agentoperation.StateCommitted,
@@ -247,30 +279,39 @@ func (s *Service) preflightManagedRemoval(
 		return repository.InterfaceRecord{}, err
 	}
 	if record.ManagementMode != "managed" {
-		return repository.InterfaceRecord{}, fmt.Errorf(
-			"%w: only interfaces created by WireGate can be removed", ErrPrecondition,
+		return repository.InterfaceRecord{}, operatorError(
+			ErrPrecondition, nil, "Only interfaces created by WireGate can be removed.",
 		)
 	}
 	if record.Revision != expectedRevision {
-		return repository.InterfaceRecord{}, ErrConflict
+		return repository.InterfaceRecord{}, operatorError(
+			ErrConflict, nil, "The interface revision changed. Refresh the page and review the removal again.",
+		)
 	}
 	if record.DriftState != "none" || !record.ConfigPresent {
-		return repository.InterfaceRecord{}, fmt.Errorf(
-			"%w: resolve interface drift before removal", ErrPrecondition,
+		return repository.InterfaceRecord{}, operatorError(
+			ErrPrecondition, nil,
+			"This interface has configuration or runtime drift. Restore the expected WireGate state, then refresh before removing it.",
 		)
 	}
 	if err := host.RequireNativeTools(record.FirewallMode == "managed_nft"); err != nil {
-		return repository.InterfaceRecord{}, fmt.Errorf("%w: %v", ErrPrecondition, err)
+		return repository.InterfaceRecord{}, operatorError(
+			ErrPrecondition, err, "Required WireGuard or host networking tools are unavailable.",
+		)
 	}
 	if !s.allowed(record.Name) || record.ConfigPath != filepath.Join(s.configRoot, record.Name+".conf") {
-		return repository.InterfaceRecord{}, fmt.Errorf("%w: interface ownership is invalid", ErrPrecondition)
+		return repository.InterfaceRecord{}, operatorError(
+			ErrPrecondition, nil,
+			"WireGate ownership metadata for this interface is invalid. It was not removed.",
+		)
 	}
 	config, err := s.files.ReadConfig(record.Name)
 	defer wipe(config.Body)
 	if err != nil || config.Hash != record.FileHash ||
 		!bytes.Contains(config.Body, []byte("WireGate-Operation: "+record.ID)) {
-		return repository.InterfaceRecord{}, fmt.Errorf(
-			"%w: managed configuration ownership or hash changed", ErrConflict,
+		return repository.InterfaceRecord{}, operatorError(
+			ErrConflict, err,
+			"The WireGuard configuration changed or no longer has its WireGate ownership marker. Refresh and review the host file before retrying.",
 		)
 	}
 	device, err := host.InspectDevice(record.Name)
@@ -280,8 +321,9 @@ func (s *Service) preflightManagedRemoval(
 	active := host.ServiceActive(ctx, record.Name)
 	if device.Present != active || device.Present != record.RuntimePresent ||
 		(device.Present && device.Fingerprint != record.RuntimeFingerprint) {
-		return repository.InterfaceRecord{}, fmt.Errorf(
-			"%w: managed runtime changed before removal", ErrConflict,
+		return repository.InterfaceRecord{}, operatorError(
+			ErrConflict, nil,
+			"The WireGuard device or systemd service changed since inventory was recorded. Refresh and retry after its state is stable.",
 		)
 	}
 	return record, nil
@@ -319,22 +361,25 @@ func (s *Service) buildInterfaceRemovalSnapshot(
 			continue
 		}
 		if !s.validManagedResourcePath(record, resource) {
-			return interfaceRemovalSnapshot{}, fmt.Errorf(
-				"%w: invalid managed resource path", ErrPrecondition,
+			return interfaceRemovalSnapshot{}, operatorError(
+				ErrPrecondition, nil,
+				"A recorded WireGate resource has an unexpected path. Nothing was removed; inspect the agent journal.",
 			)
 		}
 		info, err := os.Lstat(resource.Path)
 		if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
 			info.Size() > 4<<20 {
-			return interfaceRemovalSnapshot{}, fmt.Errorf(
-				"%w: managed resource is missing or unsafe", ErrPrecondition,
+			return interfaceRemovalSnapshot{}, operatorError(
+				ErrPrecondition, err,
+				"A WireGate-owned host file is missing or is not a safe regular file. Nothing was removed.",
 			)
 		}
 		body, err := os.ReadFile(resource.Path)
 		if err != nil || !bytes.Contains(body, marker) {
 			wipe(body)
-			return interfaceRemovalSnapshot{}, fmt.Errorf(
-				"%w: managed resource ownership changed", ErrConflict,
+			return interfaceRemovalSnapshot{}, operatorError(
+				ErrConflict, err,
+				"A WireGate-owned host file changed or lost its ownership marker. Nothing was removed.",
 			)
 		}
 		snapshot.Files = append(snapshot.Files, removalFileSnapshot{
@@ -345,8 +390,9 @@ func (s *Service) buildInterfaceRemovalSnapshot(
 	}
 	if !foundConfig {
 		wipeInterfaceRemovalSnapshot(&snapshot)
-		return interfaceRemovalSnapshot{}, fmt.Errorf(
-			"%w: managed WireGuard configuration ownership is missing", ErrPrecondition,
+		return interfaceRemovalSnapshot{}, operatorError(
+			ErrPrecondition, nil,
+			"WireGate cannot find its ownership record for the WireGuard configuration. Nothing was removed.",
 		)
 	}
 	if record.DeploymentProfile != "server_only" {

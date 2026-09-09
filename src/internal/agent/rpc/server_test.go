@@ -21,6 +21,7 @@ import (
 
 	wiregatev1 "github.com/wiregate-project/wiregate/gen/wiregate/v1"
 	"github.com/wiregate-project/wiregate/internal/agent/artifact"
+	"github.com/wiregate-project/wiregate/internal/agent/control"
 	"github.com/wiregate-project/wiregate/internal/agent/inventory"
 	"github.com/wiregate-project/wiregate/internal/agent/repository"
 	"github.com/wiregate-project/wiregate/internal/agent/secret"
@@ -30,6 +31,20 @@ import (
 )
 
 const rpcTestGatewayID = "01900000-0000-7000-8000-000000000001"
+
+type safeControlTestError struct{}
+
+func (safeControlTestError) Error() string         { return "internal detail" }
+func (safeControlTestError) Unwrap() error         { return control.ErrPrecondition }
+func (safeControlTestError) PublicMessage() string { return "Refresh the interface and try again." }
+
+func TestControlErrorMarksOnlySafeOperatorMessage(t *testing.T) {
+	err := controlError(safeControlTestError{})
+	if status.Code(err) != codes.FailedPrecondition ||
+		status.Convert(err).Message() != "wiregate-safe-v1: Refresh the interface and try again." {
+		t.Fatalf("control error = %v", err)
+	}
+}
 
 func TestConsumeOneTimeArtifactStreamsOnce(t *testing.T) {
 	ctx := context.Background()

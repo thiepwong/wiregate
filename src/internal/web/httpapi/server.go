@@ -934,6 +934,7 @@ func publicUser(id, username, displayName, role string) map[string]string {
 func (s *Server) writeProto(w http.ResponseWriter, message proto.Message, err error) {
 	if err != nil {
 		code := status.Code(err)
+		agentMessage := status.Convert(err).Message()
 		httpStatus := http.StatusBadGateway
 		publicError := "agent request failed"
 		switch code {
@@ -955,6 +956,13 @@ func (s *Server) writeProto(w http.ResponseWriter, message proto.Message, err er
 		case codes.PermissionDenied:
 			httpStatus = http.StatusForbidden
 			publicError = "permission denied"
+		}
+		const safePrefix = "wiregate-safe-v1: "
+		if strings.HasPrefix(agentMessage, safePrefix) {
+			candidate := strings.TrimSpace(strings.TrimPrefix(agentMessage, safePrefix))
+			if candidate != "" && len(candidate) <= 320 && !strings.ContainsAny(candidate, "\r\n") {
+				publicError = candidate
+			}
 		}
 		writeJSON(w, httpStatus, map[string]string{"error": publicError})
 		return

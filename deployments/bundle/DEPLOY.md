@@ -33,7 +33,7 @@ uname -m
 Download the matching release directly on the target host:
 
 ```bash
-VERSION=0.4.3-poc
+VERSION=0.4.4-poc
 ARCH=amd64 # use arm64 for aarch64 hosts
 RELEASE_URL="https://github.com/thiepwong/wiregate/releases/download/v${VERSION}"
 curl -fLO "${RELEASE_URL}/wiregate-${VERSION}-linux-${ARCH}.tar.gz"
@@ -206,6 +206,9 @@ Expected results:
   requires recent password confirmation. It removes that tunnel, its peer
   metadata and profiles, and only host files carrying WireGate's ownership
   marker. Observed and adopted interfaces remain protected from deletion.
+- Removal failures return a safe actionable reason without exposing host paths
+  or secret material. A new preview supersedes an abandoned pending preview
+  from the same administrator.
 - Do not select **Adopt interface** until you have reviewed its preview and
   warnings and verified a backup.
 

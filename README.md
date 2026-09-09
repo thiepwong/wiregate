@@ -84,23 +84,23 @@ end-to-end testing.
 Build self-contained bundles for Linux `amd64` and `arm64`:
 
 ```bash
-WIREGATE_VERSION=0.4.3-poc GOTOOLCHAIN=auto make -C src bundle
+WIREGATE_VERSION=0.4.4-poc GOTOOLCHAIN=auto make -C src bundle
 ```
 
 The build writes archives and checksum files to `build/releases/`:
 
 ```text
-wiregate-0.4.3-poc-linux-amd64.tar.gz
-wiregate-0.4.3-poc-linux-amd64.tar.gz.sha256
-wiregate-0.4.3-poc-linux-arm64.tar.gz
-wiregate-0.4.3-poc-linux-arm64.tar.gz.sha256
+wiregate-0.4.4-poc-linux-amd64.tar.gz
+wiregate-0.4.4-poc-linux-amd64.tar.gz.sha256
+wiregate-0.4.4-poc-linux-arm64.tar.gz
+wiregate-0.4.4-poc-linux-arm64.tar.gz.sha256
 ```
 
 Build only one target architecture when needed:
 
 ```bash
 cd src
-WIREGATE_VERSION=0.4.3-poc GOTOOLCHAIN=auto ./scripts/build-bundle.sh amd64
+WIREGATE_VERSION=0.4.4-poc GOTOOLCHAIN=auto ./scripts/build-bundle.sh amd64
 ```
 
 ## Install on a Linux WireGuard gateway
@@ -110,7 +110,7 @@ to `amd64`; `aarch64` maps to `arm64`). A target host can download the release
 without cloning the repository:
 
 ```bash
-VERSION=0.4.3-poc
+VERSION=0.4.4-poc
 ARCH=amd64 # use arm64 for aarch64 hosts
 RELEASE_URL="https://github.com/thiepwong/wiregate/releases/download/v${VERSION}"
 curl -fLO "${RELEASE_URL}/wiregate-${VERSION}-linux-${ARCH}.tar.gz"
@@ -125,12 +125,12 @@ Alternatively, copy both files from a local build, then verify and extract
 them:
 
 ```bash
-scp build/releases/wiregate-0.4.3-poc-linux-amd64.tar.gz* user@gateway:/tmp/
+scp build/releases/wiregate-0.4.4-poc-linux-amd64.tar.gz* user@gateway:/tmp/
 ssh user@gateway
 cd /tmp
-sha256sum -c wiregate-0.4.3-poc-linux-amd64.tar.gz.sha256
-tar -xzf wiregate-0.4.3-poc-linux-amd64.tar.gz
-cd wiregate-0.4.3-poc-linux-amd64
+sha256sum -c wiregate-0.4.4-poc-linux-amd64.tar.gz.sha256
+tar -xzf wiregate-0.4.4-poc-linux-amd64.tar.gz
+cd wiregate-0.4.4-poc-linux-amd64
 sha256sum -c SHA256SUMS
 ```
 
@@ -195,6 +195,11 @@ its tunnel, removes its peers and profiles, and deletes only host files marked
 as WireGate-owned. The action requires recent password confirmation and two
 explicit confirmations. Observed or adopted host-owned interfaces cannot be
 removed from WireGate.
+
+If a removal cannot proceed, the UI reports whether the interface revision,
+drift state, runtime/service state, ownership marker, or rollback resources
+need attention. Starting a new removal preview also safely expires an older
+pending preview from the same administrator.
 
 Back up `/etc/wireguard`, `/etc/wiregate/keys`, and both WireGate databases
 before adopting or changing peers. Losing `/etc/wiregate/keys` makes stored

@@ -994,17 +994,27 @@ func controlActor(mutation *wiregatev1.MutationContext) control.Actor {
 }
 
 func controlError(err error) error {
+	message := func(fallback string) string {
+		var actionable interface{ PublicMessage() string }
+		if errors.As(err, &actionable) {
+			value := strings.TrimSpace(actionable.PublicMessage())
+			if value != "" && len(value) <= 320 && !strings.ContainsAny(value, "\r\n") {
+				return "wiregate-safe-v1: " + value
+			}
+		}
+		return fallback
+	}
 	switch {
 	case errors.Is(err, control.ErrPermission):
-		return status.Error(codes.PermissionDenied, "control permission denied")
+		return status.Error(codes.PermissionDenied, message("control permission denied"))
 	case errors.Is(err, control.ErrInvalid):
-		return status.Error(codes.InvalidArgument, "control validation failed")
+		return status.Error(codes.InvalidArgument, message("control validation failed"))
 	case errors.Is(err, control.ErrConflict):
-		return status.Error(codes.Aborted, "control revision conflict")
+		return status.Error(codes.Aborted, message("control revision conflict"))
 	case errors.Is(err, control.ErrPrecondition):
-		return status.Error(codes.FailedPrecondition, "control precondition failed")
+		return status.Error(codes.FailedPrecondition, message("control precondition failed"))
 	case errors.Is(err, control.ErrNotFound):
-		return status.Error(codes.NotFound, "control resource not found")
+		return status.Error(codes.NotFound, message("control resource not found"))
 	default:
 		return internalError(err)
 	}

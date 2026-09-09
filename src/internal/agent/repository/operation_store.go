@@ -90,6 +90,19 @@ func (r *Repository) CreateOperation(ctx context.Context, input CreateOperationI
 	}
 
 	if input.InterfaceID != "" {
+		// A preview has not mutated host or authoritative state. A new preview
+		// from the same actor for the same action safely supersedes an older
+		// pending preview, including one abandoned at the confirmation dialog.
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE operations
+			SET state = 'expired', error_code = 'PREVIEW_SUPERSEDED',
+			    error_message_redacted = 'superseded by a newer preview',
+			    updated_at_ms = ?, finished_at_ms = ?
+			WHERE interface_id = ? AND actor_id = ? AND type = ? AND state = 'pending'`,
+			now.UnixMilli(), now.UnixMilli(), input.InterfaceID, input.ActorID, input.Type,
+		); err != nil {
+			return agentoperation.Record{}, fmt.Errorf("expire superseded operation preview: %w", err)
+		}
 		var active string
 		err := tx.QueryRowContext(ctx, `
 			SELECT id FROM operations
