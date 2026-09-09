@@ -14,7 +14,7 @@ set -eu
 SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 WORKSPACE_DIR=$(CDPATH= cd -- "$SOURCE_DIR/.." && pwd)
 DEPLOYMENTS_DIR=${WIREGATE_DEPLOYMENTS_DIR:-"$WORKSPACE_DIR/deployments"}
-VERSION=${WIREGATE_VERSION:-0.3.0-poc}
+VERSION=${WIREGATE_VERSION:-0.4.0-poc}
 DIST_DIR=${WIREGATE_DIST_DIR:-"$WORKSPACE_DIR/build/releases"}
 
 if [ "$#" -eq 0 ]; then
@@ -51,12 +51,16 @@ for ARCH in "$@"; do
     GOMODCACHE="$WORKSPACE_DIR/build/cache/go-mod" \
     CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" \
       go build -trimpath -ldflags="-s -w -X github.com/wiregate-project/wiregate/internal/shared/version.Version=$VERSION" \
-      -o "$BUNDLE_DIR/web-image/wiregate-web" ./cmd/wiregate-web
+      -o "$BUNDLE_DIR/bin/wiregate-web" ./cmd/wiregate-web
   )
+  # The Docker build context and native installer share one inode so the
+  # release archive does not store the static web binary twice.
+  ln "$BUNDLE_DIR/bin/wiregate-web" "$BUNDLE_DIR/web-image/wiregate-web"
 
   install -m 0755 "$DEPLOYMENTS_DIR/bundle/install.sh" "$BUNDLE_DIR/install.sh"
   install -m 0755 "$DEPLOYMENTS_DIR/bundle/upgrade.sh" "$BUNDLE_DIR/upgrade.sh"
   install -m 0755 "$DEPLOYMENTS_DIR/bundle/uninstall.sh" "$BUNDLE_DIR/uninstall.sh"
+  install -m 0755 "$DEPLOYMENTS_DIR/bundle/web-access.sh" "$BUNDLE_DIR/web-access.sh"
   install -m 0644 "$DEPLOYMENTS_DIR/bundle/DEPLOY.md" "$BUNDLE_DIR/DEPLOY.md"
   install -m 0644 "$DEPLOYMENTS_DIR/bundle/compose.yaml" "$BUNDLE_DIR/compose.yaml"
   install -m 0644 "$DEPLOYMENTS_DIR/bundle/web-image.Dockerfile" "$BUNDLE_DIR/web-image/Dockerfile"
@@ -66,6 +70,8 @@ for ARCH in "$@"; do
     "$BUNDLE_DIR/systemd/wiregate-agent.service"
   install -m 0644 "$DEPLOYMENTS_DIR/systemd/wiregate-agent.socket" \
     "$BUNDLE_DIR/systemd/wiregate-agent.socket"
+  install -m 0644 "$DEPLOYMENTS_DIR/systemd/wiregate-web.service" \
+    "$BUNDLE_DIR/systemd/wiregate-web.service"
   install -m 0644 "$DEPLOYMENTS_DIR/systemd/wiregate.conf" \
     "$BUNDLE_DIR/systemd/wiregate.conf"
   printf '%s\n' "$VERSION" > "$BUNDLE_DIR/VERSION"

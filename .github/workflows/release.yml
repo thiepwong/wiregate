@@ -1,0 +1,63 @@
+# File: .github/workflows/release.yml
+# Project: WireGate
+# Copyright (c) 2026 Thiep Wong
+# SPDX-License-Identifier: MIT
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-09-09
+# Description: Build and publish verified Linux bundles for version tags.
+
+name: Release Linux bundles
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install the declared Go toolchain
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: src/go.sum
+
+      - name: Verify source and deployment scripts
+        run: |
+          set -eu
+          ./src/scripts/check-headers.sh
+          sh -n deployments/bundle/*.sh src/scripts/build-bundle.sh
+          cd src
+          go test ./...
+
+      - name: Build amd64 and arm64 release bundles
+        env:
+          WIREGATE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -eu
+          WIREGATE_VERSION=${WIREGATE_VERSION#v}
+          export WIREGATE_VERSION
+          ./src/scripts/build-bundle.sh amd64 arm64
+          cd build/releases
+          sha256sum -c ./*.tar.gz.sha256
+
+      - name: Publish GitHub prerelease assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            build/releases/*.tar.gz \
+            build/releases/*.tar.gz.sha256 \
+            --verify-tag \
+            --title "WireGate ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            --prerelease

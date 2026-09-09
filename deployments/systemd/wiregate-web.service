@@ -1,0 +1,34 @@
+# File: deployments/systemd/wiregate-web.service
+# Project: WireGate
+# Copyright (c) 2026 Thiep Wong
+# SPDX-License-Identifier: MIT
+# Author: Thiep Wong
+# Email: thiep.wong@gmail.com
+# Date: 2026-09-09
+# Description: WireGate systemd unit definition.
+
+[Unit]
+Description=WireGate Web
+Requires=wiregate-agent.socket
+After=network-online.target wiregate-agent.socket
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/wiregate/wiregate-web -config /etc/wiregate-web/web.yaml
+User=wiregate-web
+Group=wiregate
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/wiregate-web
+ReadOnlyPaths=/etc/wiregate-web /run/wiregate
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitCORE=0
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target

@@ -30,6 +30,18 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "check-config" {
+		configFlags := flag.NewFlagSet("check-config", flag.ContinueOnError)
+		configPath := configFlags.String("config", "/etc/wiregate/web.yaml", "path to web YAML config")
+		if err := configFlags.Parse(os.Args[2:]); err != nil {
+			os.Exit(2)
+		}
+		if _, err := webconfig.Load(*configPath); err != nil {
+			fmt.Fprintln(os.Stderr, "load web config:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
 		healthFlags := flag.NewFlagSet("healthcheck", flag.ContinueOnError)
 		configPath := healthFlags.String("config", "/etc/wiregate/web.yaml", "path to web YAML config")
