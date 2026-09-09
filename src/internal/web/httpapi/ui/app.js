@@ -113,20 +113,20 @@ function actionButton(label, handler, danger = false) {
 async function lifecycle(peer, record, mutation) {
 	if (mutation === "revoke" && !confirm("Revocation is a terminal security action, and the peer's IP addresses will be quarantined. Continue?")) return;
 	try {
-		if (mutation === "revoke" && !await recentPassword()) return;
+		if (mutation === "revoke" && !await recentPassword("revoke this peer")) return;
     await previewAndCommit(`/api/v1/peers/${encodeURIComponent(peer.id)}/lifecycle-previews`,
       {mutation, reason: `${mutation} peer from UI`}, Number(record.revision || 0));
     await load();
   } catch (error) { alert(error.message); }
 }
-async function recentPassword() {
-  const password = prompt("Re-enter your password to export the private key:");
+async function recentPassword(purpose = "continue") {
+  const password = prompt(`Re-enter your admin password to ${purpose}:`);
   if (!password) return false;
   await postJSON("/api/v1/auth/reauth", {password}, {"X-CSRF-Token": csrf()}); return true;
 }
 async function exportPeer(peer, format) {
   try {
-    if (!await recentPassword()) return;
+    if (!await recentPassword("export the private key")) return;
     const {body, response} = await request(`/api/v1/peers/${encodeURIComponent(peer.id)}/exports`, {
       method: "POST", headers: {"Content-Type": "application/json", "X-CSRF-Token": csrf(), "Idempotency-Key": requestKey()},
       body: JSON.stringify({format}),
@@ -156,6 +156,8 @@ async function renderInterface(record) {
 	$(".add-peer", card).addEventListener("click", () => openPeer(record));
 	$(".adopt-interface", card).hidden = !(mode === "observed" && backend === "wg quick" && record.config_present);
 	$(".adopt-interface", card).addEventListener("click", () => adoptInterface(record));
+	$(".remove-interface", card).hidden = mode !== "managed";
+	$(".remove-interface", card).addEventListener("click", () => removeInterface(record));
   const container = $(".peers", card);
   try {
     const response = await getJSON(`/api/v1/interfaces/${encodeURIComponent(record.id)}/peers`);
@@ -193,6 +195,19 @@ async function adoptInterface(record) {
 	} catch (error) { alert(error.message); }
 }
 
+async function removeInterface(record) {
+	if (!confirm(`Remove ${record.name} permanently?\n\nIts WireGuard tunnel, peers, profiles, and WireGate-owned host files will be deleted. Do not continue if this browser or SSH session depends on that tunnel.`)) return;
+	try {
+		if (!await recentPassword("remove this managed interface")) return;
+		const result = await previewAndCommit(
+			`/api/v1/interfaces/${encodeURIComponent(record.id)}/state-previews`,
+			{desired_state: "removed", reason: "Remove managed WireGuard interface from UI"},
+			Number(record.revision || 0),
+		);
+		if (result) await load();
+	} catch (error) { alert(error.message); }
+}
+
 function openPeer(record) {
   const form = $("#peer-form"); form.reset(); form.interface_id.value = record.id; form.revision.value = record.revision || 0;
   form.endpoint_host.value = location.hostname; form.endpoint_port.value = record.listen_port || 51820;
@@ -223,7 +238,7 @@ $("#peer-form").addEventListener("submit", async (event) => {
     const result = await previewAndCommit(`/api/v1/interfaces/${encodeURIComponent(value.interface_id)}/peer-previews`, payload, Number(value.revision));
     if (!result) return; $("#peer-dialog").close(); await load();
     if (result.one_time_token && confirm("The one-time profile is ready. Download it now? It cannot be downloaded again.")) {
-      if (!await recentPassword()) return;
+      if (!await recentPassword("download the one-time private profile")) return;
       const {body, response} = await request("/api/v1/artifacts/consume", {method: "POST", headers: {"Content-Type": "application/json", "X-CSRF-Token": csrf()},
         body: JSON.stringify({format: "conf", token: result.one_time_token})});
       downloadBlob(body, response.headers.get("content-disposition"), `${payload.name}.conf`);
@@ -254,7 +269,7 @@ $("#interface-form").addEventListener("submit", async (event) => {
 $("#reload").addEventListener("click", load);
 $("#create-interface").addEventListener("click", () => {
   const form = $("#interface-form"); form.reset();
-  form.name.value = "wg0"; form.address.value = "10.77.0.1/24";
+  form.name.value = "wg0"; form.address.value = "10.200.0.1/24";
   form.listen_port.value = 51820; form.auto_start.checked = true;
   form.reason.value = "Create WireGuard interface";
   $(".form-error", form).hidden = true; $("#interface-dialog").showModal();

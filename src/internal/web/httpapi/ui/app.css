@@ -141,6 +141,7 @@ dd { margin: 5px 0 0; text-transform: capitalize; }
 .peers { display: grid; gap: 8px; }
 .interface-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 13px; }
 .interface-actions button { min-height: 38px; border-radius: 9px; }
+.interface-actions button.danger { color: #ffc1b6; border-color: #7b3931; }
 .peer {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) 150px 130px 150px minmax(170px, auto);

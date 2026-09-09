@@ -139,6 +139,50 @@ func (s *Server) CreateInterface(
 	}, nil
 }
 
+func (s *Server) PreviewSetInterfaceState(
+	ctx context.Context,
+	request *wiregatev1.PreviewSetInterfaceStateRequest,
+) (*wiregatev1.OperationPlan, error) {
+	if s.control == nil {
+		return nil, status.Error(codes.FailedPrecondition, "interface control is unavailable")
+	}
+	mutation := request.GetContext()
+	if mutation == nil || mutation.Actor == nil || mutation.ExpectedRevision == nil {
+		return nil, status.Error(codes.InvalidArgument, "mutation actor and expected revision are required")
+	}
+	preview, err := s.control.PreviewSetInterfaceState(
+		ctx, request.GetInterfaceId(), request.GetDesiredState(),
+		mutation.GetExpectedRevision(), controlActor(mutation),
+	)
+	if err != nil {
+		return nil, controlError(err)
+	}
+	return operationPlanMessage(preview), nil
+}
+
+func (s *Server) SetInterfaceState(
+	ctx context.Context,
+	request *wiregatev1.CommitOperationRequest,
+) (*wiregatev1.OperationRef, error) {
+	if s.control == nil {
+		return nil, status.Error(codes.FailedPrecondition, "interface control is unavailable")
+	}
+	mutation := request.GetContext()
+	if mutation == nil || mutation.Actor == nil {
+		return nil, status.Error(codes.InvalidArgument, "mutation actor is required")
+	}
+	result, err := s.control.CommitSetInterfaceState(
+		ctx, request.GetOperationId(), controlActor(mutation),
+	)
+	if err != nil {
+		return nil, controlError(err)
+	}
+	return &wiregatev1.OperationRef{
+		OperationId: result.OperationID, State: string(result.State),
+		InterfaceRevision: result.InterfaceRevision,
+	}, nil
+}
+
 func (s *Server) PreviewCreatePeer(
 	ctx context.Context,
 	request *wiregatev1.PreviewCreatePeerRequest,

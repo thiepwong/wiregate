@@ -110,6 +110,20 @@ func (c *Client) CreateInterface(
 	return c.api.CreateInterface(ctx, request)
 }
 
+func (c *Client) PreviewSetInterfaceState(
+	ctx context.Context,
+	request *wiregatev1.PreviewSetInterfaceStateRequest,
+) (*wiregatev1.OperationPlan, error) {
+	return c.api.PreviewSetInterfaceState(ctx, request)
+}
+
+func (c *Client) SetInterfaceState(
+	ctx context.Context,
+	request *wiregatev1.CommitOperationRequest,
+) (*wiregatev1.OperationRef, error) {
+	return c.api.SetInterfaceState(ctx, request)
+}
+
 func (c *Client) PreviewCreatePeer(
 	ctx context.Context,
 	request *wiregatev1.PreviewCreatePeerRequest,

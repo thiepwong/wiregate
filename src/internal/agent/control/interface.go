@@ -505,7 +505,11 @@ func (s *Service) Recover(ctx context.Context) error {
 				err = s.repository.TransitionOperation(ctx, record.ID, record.State, agentoperation.StateRejected, failure)
 			}
 		case agentoperation.StateVerifying:
-			err = s.recoverVerifying(ctx, metadata)
+			if metadata.Type == "set_interface_state" {
+				err = s.recoverInterfaceRemoval(ctx, metadata)
+			} else {
+				err = s.recoverVerifying(ctx, metadata)
+			}
 		case agentoperation.StateSnapshotted, agentoperation.StateExecuting,
 			agentoperation.StateRollingBack:
 			secretContext, envelope, loadErr := s.repository.LoadOperationSnapshot(ctx, record.ID)
@@ -611,6 +615,17 @@ func (s *Service) recoverSnapshotted(
 	payload []byte,
 ) error {
 	switch metadata.Type {
+	case "set_interface_state":
+		var snapshot interfaceRemovalSnapshot
+		if err := json.Unmarshal(payload, &snapshot); err != nil {
+			return err
+		}
+		unlock, err := s.lockInterface(snapshot.Name)
+		if err != nil {
+			return err
+		}
+		defer unlock()
+		return s.rollbackInterfaceRemoval(ctx, metadata.ID, &snapshot)
 	case "create_interface":
 		var snapshot interfaceSnapshot
 		if err := json.Unmarshal(payload, &snapshot); err != nil {

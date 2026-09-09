@@ -28,6 +28,39 @@ import (
 
 type fakeAgent struct{}
 
+type interfaceStateAgent struct {
+	fakeAgent
+	previewRequest *wiregatev1.PreviewSetInterfaceStateRequest
+	commitRequest  *wiregatev1.CommitOperationRequest
+}
+
+func (agent *interfaceStateAgent) PreviewSetInterfaceState(
+	_ context.Context,
+	request *wiregatev1.PreviewSetInterfaceStateRequest,
+) (*wiregatev1.OperationPlan, error) {
+	agent.previewRequest = request
+	return &wiregatev1.OperationPlan{
+		OperationId: "remove-operation", OperationType: "set_interface_state",
+	}, nil
+}
+
+func (agent *interfaceStateAgent) GetOperation(
+	context.Context,
+	string,
+) (*wiregatev1.GetOperationResponse, error) {
+	return &wiregatev1.GetOperationResponse{Operation: &wiregatev1.OperationView{
+		Id: "remove-operation", OperationType: "set_interface_state", State: "pending",
+	}}, nil
+}
+
+func (agent *interfaceStateAgent) SetInterfaceState(
+	_ context.Context,
+	request *wiregatev1.CommitOperationRequest,
+) (*wiregatev1.OperationRef, error) {
+	agent.commitRequest = request
+	return &wiregatev1.OperationRef{OperationId: request.GetOperationId(), State: "committed"}, nil
+}
+
 func (fakeAgent) GetAgentInfo(context.Context) (*wiregatev1.GetAgentInfoResponse, error) {
 	return &wiregatev1.GetAgentInfoResponse{Agent: &wiregatev1.AgentInfo{}}, nil
 }
@@ -53,6 +86,12 @@ func (fakeAgent) PreviewCreateInterface(context.Context, *wiregatev1.PreviewCrea
 	return &wiregatev1.OperationPlan{}, nil
 }
 func (fakeAgent) CreateInterface(context.Context, *wiregatev1.CommitOperationRequest) (*wiregatev1.OperationRef, error) {
+	return &wiregatev1.OperationRef{}, nil
+}
+func (fakeAgent) PreviewSetInterfaceState(context.Context, *wiregatev1.PreviewSetInterfaceStateRequest) (*wiregatev1.OperationPlan, error) {
+	return &wiregatev1.OperationPlan{}, nil
+}
+func (fakeAgent) SetInterfaceState(context.Context, *wiregatev1.CommitOperationRequest) (*wiregatev1.OperationRef, error) {
 	return &wiregatev1.OperationRef{}, nil
 }
 func (fakeAgent) PreviewCreatePeer(context.Context, *wiregatev1.PreviewCreatePeerRequest) (*wiregatev1.OperationPlan, error) {
@@ -148,6 +187,9 @@ func TestAuthStatusHidesBootstrapAfterFirstAdmin(t *testing.T) {
 		`<body class="auth-pending">`,
 		`id="auth-loading"`,
 		`id="create-interface"`,
+		`class="remove-interface secondary danger"`,
+		`value="10.200.0.1/24"`,
+		`placeholder="10.200.0.2/32"`,
 		`CREATE OR ADOPT`,
 	} {
 		if !strings.Contains(pageResponse.Body.String(), marker) {
@@ -163,6 +205,9 @@ func TestAuthStatusHidesBootstrapAfterFirstAdmin(t *testing.T) {
 	for _, marker := range []string{
 		`["managed", "adopted"].includes(mode)`,
 		`$("#create-interface").addEventListener`,
+		`/state-previews`,
+		`desired_state: "removed"`,
+		`mode !== "managed"`,
 		`document.body.classList.remove("auth-pending")`,
 		`function completeAuthentication(result, form)`,
 		`document.body.classList.add("auth-pending")`,
@@ -240,5 +285,102 @@ func TestAuthenticatedViewerCanReadButCannotMutate(t *testing.T) {
 	}
 	if principal.Role != "admin" || !auth.Allowed(principal.Role, "interface:adopt") {
 		t.Fatalf("principal = %#v", principal)
+	}
+}
+
+func TestManagedInterfaceRemovalRequiresReauthentication(t *testing.T) {
+	ctx := context.Background()
+	store, err := repository.Open(ctx, filepath.Join(t.TempDir(), "web.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	token, tokenHash, err := auth.NewBootstrapToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	if err := store.SetBootstrapToken(ctx, tokenHash, now.Add(time.Minute), now); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := auth.NewManager(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const password = "correct horse battery staple"
+	if _, err := manager.Bootstrap(ctx, token, "admin", "Admin", password, "bootstrap-request"); err != nil {
+		t.Fatal(err)
+	}
+	_, tokens, err := manager.Login(ctx, "admin", password, "login-request", "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent := &interfaceStateAgent{}
+	server, err := New(agent, manager, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Handler()
+	newMutationRequest := func(method, target, body string) *http.Request {
+		request := httptest.NewRequest(method, target, strings.NewReader(body))
+		request.AddCookie(&http.Cookie{Name: auth.CookieName, Value: tokens.Session})
+		request.Header.Set("Origin", "https://gateway.test")
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("X-CSRF-Token", tokens.CSRF)
+		request.Header.Set("Idempotency-Key", "remove-idempotency")
+		return request
+	}
+
+	previewRequest := newMutationRequest(
+		http.MethodPost,
+		"https://gateway.test/api/v1/interfaces/managed-interface/state-previews",
+		`{"desired_state":"removed","reason":"reset interface"}`,
+	)
+	previewRequest.Header.Set("If-Match", "7")
+	previewResponse := httptest.NewRecorder()
+	handler.ServeHTTP(previewResponse, previewRequest)
+	if previewResponse.Code != http.StatusOK {
+		t.Fatalf("preview status=%d body=%s", previewResponse.Code, previewResponse.Body.String())
+	}
+	if agent.previewRequest.GetInterfaceId() != "managed-interface" ||
+		agent.previewRequest.GetDesiredState() != "removed" ||
+		agent.previewRequest.GetContext().GetExpectedRevision() != 7 ||
+		agent.previewRequest.GetContext().GetActor().GetPermission() != "interface:manage" {
+		t.Fatalf("preview request = %#v", agent.previewRequest)
+	}
+
+	commitRequest := newMutationRequest(
+		http.MethodPost,
+		"https://gateway.test/api/v1/operations/remove-operation/commit",
+		`{"reason":"confirmed removal"}`,
+	)
+	commitResponse := httptest.NewRecorder()
+	handler.ServeHTTP(commitResponse, commitRequest)
+	if commitResponse.Code != http.StatusForbidden || agent.commitRequest != nil {
+		t.Fatalf("commit without reauth status=%d body=%s", commitResponse.Code, commitResponse.Body.String())
+	}
+
+	authRequest := httptest.NewRequest(http.MethodGet, "https://gateway.test/", nil)
+	authRequest.AddCookie(&http.Cookie{Name: auth.CookieName, Value: tokens.Session})
+	principal, err := manager.Authenticate(ctx, authRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Reauthenticate(ctx, principal, password); err != nil {
+		t.Fatal(err)
+	}
+	commitRequest = newMutationRequest(
+		http.MethodPost,
+		"https://gateway.test/api/v1/operations/remove-operation/commit",
+		`{"reason":"confirmed removal"}`,
+	)
+	commitResponse = httptest.NewRecorder()
+	handler.ServeHTTP(commitResponse, commitRequest)
+	if commitResponse.Code != http.StatusOK {
+		t.Fatalf("commit after reauth status=%d body=%s", commitResponse.Code, commitResponse.Body.String())
+	}
+	if agent.commitRequest.GetOperationId() != "remove-operation" ||
+		agent.commitRequest.GetContext().GetActor().GetPermission() != "interface:manage" {
+		t.Fatalf("commit request = %#v", agent.commitRequest)
 	}
 }

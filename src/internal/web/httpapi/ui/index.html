@@ -102,6 +102,7 @@
       <div class="interface-actions">
         <button class="adopt-interface" type="button">Adopt interface</button>
         <button class="add-peer secondary" type="button">+ Add peer</button>
+        <button class="remove-interface secondary danger" type="button">Remove interface</button>
       </div>
     </article>
   </template>
@@ -109,7 +110,7 @@
     <form id="interface-form" method="dialog">
       <div class="dialog-head"><h2>Create WireGuard interface</h2><button class="icon secondary" type="button" data-close>×</button></div>
       <label>Interface name<input name="name" value="wg0" pattern="[A-Za-z0-9_.-]+" required></label>
-      <label>Tunnel address (CIDR)<input name="address" value="10.77.0.1/24" required></label>
+      <label>Tunnel address (CIDR)<input name="address" value="10.200.0.1/24" required></label>
       <label>UDP listen port<input name="listen_port" type="number" min="1" max="65535" value="51820" required></label>
       <label>Deployment profile<select name="deployment_profile"><option value="server_only">Server only</option><option value="lan">LAN access</option><option value="full_tunnel">Full tunnel / NAT</option></select></label>
       <label>Firewall<select name="firewall_mode"><option value="external">External / manual</option><option value="managed_nft">WireGate managed nftables</option></select></label>
@@ -128,8 +129,8 @@
       <label>Peer name<input name="name" placeholder="laptop-alice" required></label>
       <label>Key mode<select name="key_mode"><option value="managed">Managed — reusable download</option><option value="one_time">One-time — download once</option><option value="external">External — client retains private key</option></select></label>
       <label class="external-key" hidden>Client public key<input name="external_public_key"></label>
-      <label>Client address (leave blank for IPAM)<input name="server_allowed_ips" placeholder="10.77.0.2/32"></label>
-      <label>Client routes (comma-separated)<input name="client_routes" placeholder="10.77.0.0/24"></label>
+      <label>Client address (leave blank for IPAM)<input name="server_allowed_ips" placeholder="10.200.0.2/32"></label>
+      <label>Client routes (comma-separated)<input name="client_routes" placeholder="10.200.0.0/24"></label>
       <label>DNS servers (comma-separated)<input name="dns" value="1.1.1.1"></label>
       <div class="two"><label>Endpoint host<input name="endpoint_host" required></label><label>Port<input name="endpoint_port" type="number" value="51820" min="1" max="65535" required></label></div>
       <div class="two"><label>MTU<input name="mtu" type="number" value="1420"></label><label>Keepalive (seconds)<input name="keepalive" type="number" value="25"></label></div>

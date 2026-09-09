@@ -29,16 +29,18 @@ import (
 
 func main() {
 	var socket, output string
+	var removeInterface bool
 	flag.StringVar(&socket, "socket", "/run/wiregate/agent.sock", "agent Unix socket")
 	flag.StringVar(&output, "config-output", "", "optional exclusive 0600 path for the temporary client config")
+	flag.BoolVar(&removeInterface, "remove-interface", false, "remove the managed test interface after verification")
 	flag.Parse()
-	if err := run(socket, output); err != nil {
+	if err := run(socket, output, removeInterface); err != nil {
 		fmt.Fprintln(os.Stderr, "smoke failed:", err)
 		os.Exit(1)
 	}
 }
 
-func run(socket, output string) error {
+func run(socket, output string, removeInterface bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	connection, err := grpc.NewClient("passthrough:///wiregate-agent",
@@ -72,7 +74,7 @@ func run(socket, output string) error {
 		key := fmt.Sprintf("smoke-interface-%d", time.Now().UnixNano())
 		plan, err := client.PreviewCreateInterface(ctx, &wiregatev1.PreviewCreateInterfaceRequest{
 			Context: mutation("interface:create", key, nil), Name: "wg0",
-			InterfaceAddresses: []string{"10.77.0.1/24"}, ListenPort: 51820,
+			InterfaceAddresses: []string{"10.200.0.1/24"}, ListenPort: 51820,
 			DeploymentProfile: "server_only", FirewallMode: "external", AutoStart: true,
 		})
 		if err != nil {
@@ -103,7 +105,7 @@ func run(socket, output string) error {
 		key := fmt.Sprintf("smoke-peer-%d", time.Now().UnixNano())
 		plan, err := client.PreviewCreatePeer(ctx, &wiregatev1.PreviewCreatePeerRequest{
 			Context: mutation("client:manage", key, &revision), InterfaceId: target.GetId(),
-			Name: "smoke-client", KeyMode: "managed", ClientRoutes: []string{"10.77.0.1/32"},
+			Name: "smoke-client", KeyMode: "managed", ClientRoutes: []string{"10.200.0.0/24"},
 			EndpointHost: text("192.168.252.2"), EndpointPort: number(51820),
 			PersistentKeepaliveSeconds: number(25), UsePresharedKey: true,
 		})
@@ -160,7 +162,33 @@ func run(socket, output string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("re-enabled peer revision=%d\nsmoke contract passed\n", revision)
+	fmt.Printf("re-enabled peer revision=%d\n", revision)
+	if removeInterface {
+		key := fmt.Sprintf("smoke-remove-interface-%d", time.Now().UnixNano())
+		plan, err := client.PreviewSetInterfaceState(ctx, &wiregatev1.PreviewSetInterfaceStateRequest{
+			Context: mutation("interface:manage", key, &revision), InterfaceId: target.GetId(),
+			DesiredState: "removed",
+		})
+		if err != nil {
+			return fmt.Errorf("preview interface removal: %w", err)
+		}
+		if _, err := client.SetInterfaceState(ctx, &wiregatev1.CommitOperationRequest{
+			OperationId: plan.GetOperationId(), Context: mutation("interface:manage", key, nil),
+		}); err != nil {
+			return fmt.Errorf("remove interface: %w", err)
+		}
+		remaining, err := client.ListInterfaces(ctx, &wiregatev1.ListInterfacesRequest{})
+		if err != nil {
+			return err
+		}
+		for _, item := range remaining.GetInterfaces() {
+			if item.GetId() == target.GetId() {
+				return errors.New("removed interface remains in inventory")
+			}
+		}
+		fmt.Println("managed interface removal verified")
+	}
+	fmt.Println("smoke contract passed")
 	return nil
 }
 

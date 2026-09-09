@@ -33,7 +33,7 @@ uname -m
 Download the matching release directly on the target host:
 
 ```bash
-VERSION=0.4.2-poc
+VERSION=0.4.3-poc
 ARCH=amd64 # use arm64 for aarch64 hosts
 RELEASE_URL="https://github.com/thiepwong/wiregate/releases/download/v${VERSION}"
 curl -fLO "${RELEASE_URL}/wiregate-${VERSION}-linux-${ARCH}.tar.gz"
@@ -124,7 +124,7 @@ to that address:
 ```bash
 sudo wg show interfaces
 ip -o address show dev wg0
-sudo wiregate-web-access restrict --bind-address 10.77.0.1
+sudo wiregate-web-access restrict --bind-address 10.200.0.1
 sudo wiregate-web-access status
 ```
 
@@ -200,6 +200,12 @@ Expected results:
   `600`.
 - The UI displays existing `wg-quick` interfaces and can create a new one on a
   host without an existing configuration.
+- New interfaces default to `10.200.0.1/24`; peers receive individual `/32`
+  addresses beginning at `10.200.0.2/32`.
+- **Remove interface** is available only for WireGate-created interfaces and
+  requires recent password confirmation. It removes that tunnel, its peer
+  metadata and profiles, and only host files carrying WireGate's ownership
+  marker. Observed and adopted interfaces remain protected from deletion.
 - Do not select **Adopt interface** until you have reviewed its preview and
   warnings and verified a backup.
 
@@ -264,12 +270,15 @@ the selected web runtime, its persisted access state, and
 
 ## 11. POC scope
 
-This version includes discovery and adoption UI, IPAM import, existing peer
+This version includes discovery and adoption UI, managed interface creation
+and removal, IPAM import, existing peer
 import with or without a preshared key, greenfield interface support, managed,
 one-time, and external-key peer creation, peer updates, managed `.conf` and QR
 exports, and disable, enable, and revoke lifecycle actions. These flows use an
-operation journal and revision/hash guards and have passed an adopt-only smoke
-test and reboot gate on Ubuntu ARM64.
+operation journal and revision/hash guards. Fresh installation with automatic
+WireGuard package setup, interface create/remove/recreate, protected observed
+interfaces, native HTTP re-authentication, and reboot auto-start have passed
+an Ubuntu ARM64 integration gate.
 
 Interface start/stop UI, drift resolution, operation rollback UI, and atomic
 re-enrollment remain fail-closed. nftables coexistence with every firewall

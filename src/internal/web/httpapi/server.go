@@ -43,6 +43,8 @@ type Agent interface {
 	CommitAdoption(context.Context, *wiregatev1.CommitOperationRequest) (*wiregatev1.OperationRef, error)
 	PreviewCreateInterface(context.Context, *wiregatev1.PreviewCreateInterfaceRequest) (*wiregatev1.OperationPlan, error)
 	CreateInterface(context.Context, *wiregatev1.CommitOperationRequest) (*wiregatev1.OperationRef, error)
+	PreviewSetInterfaceState(context.Context, *wiregatev1.PreviewSetInterfaceStateRequest) (*wiregatev1.OperationPlan, error)
+	SetInterfaceState(context.Context, *wiregatev1.CommitOperationRequest) (*wiregatev1.OperationRef, error)
 	PreviewCreatePeer(context.Context, *wiregatev1.PreviewCreatePeerRequest) (*wiregatev1.OperationPlan, error)
 	CreatePeer(context.Context, *wiregatev1.CommitOperationRequest) (*wiregatev1.CreatePeerResponse, error)
 	PreviewUpdatePeer(context.Context, *wiregatev1.PreviewUpdatePeerRequest) (*wiregatev1.OperationPlan, error)
@@ -96,6 +98,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/interfaces/{interface_id}", s.interfaceByID)
 	mux.HandleFunc("GET /api/v1/interfaces/{interface_id}/peers", s.peers)
 	mux.HandleFunc("POST /api/v1/interfaces/previews", s.previewCreateInterface)
+	mux.HandleFunc("POST /api/v1/interfaces/{interface_id}/state-previews", s.previewSetInterfaceState)
 	mux.HandleFunc("POST /api/v1/interfaces/{interface_id}/peer-previews", s.previewCreatePeer)
 	mux.HandleFunc("POST /api/v1/peers/{peer_id}/update-previews", s.previewUpdatePeer)
 	mux.HandleFunc("POST /api/v1/peers/{peer_id}/exports", s.exportClient)
@@ -334,6 +337,45 @@ func (s *Server) previewCreatePeer(w http.ResponseWriter, request *http.Request)
 		EndpointHost: optionalString(body.EndpointHost), EndpointPort: optionalUint32(body.EndpointPort),
 		PersistentKeepaliveSeconds: optionalUint32(body.PersistentKeepalive),
 		UsePresharedKey:            body.UsePresharedKey,
+	})
+	s.writeProto(w, response, err)
+}
+
+type interfaceStateBody struct {
+	DesiredState string `json:"desired_state"`
+	Reason       string `json:"reason"`
+}
+
+func (s *Server) previewSetInterfaceState(w http.ResponseWriter, request *http.Request) {
+	principal, ok := s.require(w, request, "interface:manage", true)
+	if !ok {
+		return
+	}
+	interfaceID := strings.TrimSpace(request.PathValue("interface_id"))
+	revision, revisionErr := parseRevision(request.Header.Get("If-Match"))
+	idempotency := strings.TrimSpace(request.Header.Get("Idempotency-Key"))
+	if interfaceID == "" || len(interfaceID) > 128 || revisionErr != nil ||
+		idempotency == "" || len(idempotency) > 128 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "interface, If-Match and Idempotency-Key required",
+		})
+		return
+	}
+	var body interfaceStateBody
+	if err := decodeJSON(w, request, &body); err != nil {
+		return
+	}
+	if strings.ToLower(strings.TrimSpace(body.DesiredState)) != "removed" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "desired_state must be removed"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(request.Context(), 10*time.Second)
+	defer cancel()
+	response, err := s.agent.PreviewSetInterfaceState(ctx, &wiregatev1.PreviewSetInterfaceStateRequest{
+		Context: mutationContext(
+			principal, requestID(request), "interface:manage", idempotency, &revision, body.Reason,
+		),
+		InterfaceId: interfaceID, DesiredState: "removed",
 	})
 	s.writeProto(w, response, err)
 }
@@ -582,6 +624,8 @@ func (s *Server) commitOperation(w http.ResponseWriter, request *http.Request) {
 		permission = "interface:adopt"
 	case "create_interface":
 		permission = "interface:create"
+	case "set_interface_state":
+		permission = "interface:manage"
 	case "create_peer", "update_peer":
 		permission = "client:manage"
 	case "disable_peer", "enable_peer", "revoke_peer":
@@ -594,7 +638,8 @@ func (s *Server) commitOperation(w http.ResponseWriter, request *http.Request) {
 	if !ok {
 		return
 	}
-	if operation.GetOperation().GetOperationType() == "revoke_peer" {
+	if operation.GetOperation().GetOperationType() == "revoke_peer" ||
+		operation.GetOperation().GetOperationType() == "set_interface_state" {
 		if err := s.auth.RequireRecentReauth(principal); err != nil {
 			writeJSON(w, http.StatusForbidden, map[string]string{"error": "recent password confirmation required"})
 			return
@@ -625,6 +670,8 @@ func (s *Server) commitOperation(w http.ResponseWriter, request *http.Request) {
 	switch operation.GetOperation().GetOperationType() {
 	case "create_interface":
 		response, err = s.agent.CreateInterface(ctx, agentRequest)
+	case "set_interface_state":
+		response, err = s.agent.SetInterfaceState(ctx, agentRequest)
 	case "create_peer":
 		response, err = s.agent.CreatePeer(ctx, agentRequest)
 	case "update_peer":
