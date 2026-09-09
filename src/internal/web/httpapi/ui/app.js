@@ -53,6 +53,12 @@ function showApp() {
   $("#logout").hidden = false; $("#password").hidden = false;
   $("#bootstrap-setup").hidden = true;
 }
+function completeAuthentication(result, form) {
+  sessionStorage.setItem("wiregate-csrf", result.csrf_token);
+  form.reset();
+  document.body.classList.add("auth-pending");
+  window.location.reload();
+}
 async function refreshBootstrapVisibility() {
   const setup = $("#bootstrap-setup"); setup.hidden = true;
   try {
@@ -260,14 +266,14 @@ $("#password-form").addEventListener("submit", async (event) => {
   catch (error) { showFormError(form, error); }
 });
 $("#login-form").addEventListener("submit", async (event) => {
-  event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget));
-  try { const result = await postJSON("/api/v1/auth/login", values); sessionStorage.setItem("wiregate-csrf", result.csrf_token);
-    event.currentTarget.reset(); showApp(); await load(); } catch (error) { showAuth(error.message); }
+  event.preventDefault(); const form = event.currentTarget, values = Object.fromEntries(new FormData(form));
+  try { const result = await postJSON("/api/v1/auth/login", values); completeAuthentication(result, form); }
+  catch (error) { showAuth(error.message); }
 });
 $("#bootstrap-form").addEventListener("submit", async (event) => {
-  event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget));
+  event.preventDefault(); const form = event.currentTarget, values = Object.fromEntries(new FormData(form));
   try { await postJSON("/api/v1/auth/bootstrap", values); const result = await postJSON("/api/v1/auth/login", {username: values.username, password: values.password});
-    sessionStorage.setItem("wiregate-csrf", result.csrf_token); event.currentTarget.reset(); showApp(); await load(); } catch (error) { showAuth(error.message); }
+    completeAuthentication(result, form); } catch (error) { showAuth(error.message); }
 });
 $("#logout").addEventListener("click", async () => {
   try { await postJSON("/api/v1/auth/logout", {}, {"X-CSRF-Token": csrf()}); } finally { sessionStorage.removeItem("wiregate-csrf"); showAuth(); }

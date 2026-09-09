@@ -164,10 +164,17 @@ func TestAuthStatusHidesBootstrapAfterFirstAdmin(t *testing.T) {
 		`["managed", "adopted"].includes(mode)`,
 		`$("#create-interface").addEventListener`,
 		`document.body.classList.remove("auth-pending")`,
+		`function completeAuthentication(result, form)`,
+		`document.body.classList.add("auth-pending")`,
+		`window.location.reload()`,
+		`completeAuthentication(result, form)`,
 	} {
 		if !strings.Contains(appResponse.Body.String(), marker) {
 			t.Fatalf("app.js is missing %q", marker)
 		}
+	}
+	if strings.Contains(appResponse.Body.String(), `completeAuthentication(result, event.currentTarget)`) {
+		t.Fatal("login handlers must retain the form before awaiting the API response")
 	}
 
 	now := time.Now().UTC()

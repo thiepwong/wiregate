@@ -14,7 +14,7 @@ set -eu
 SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 WORKSPACE_DIR=$(CDPATH= cd -- "$SOURCE_DIR/.." && pwd)
 DEPLOYMENTS_DIR=${WIREGATE_DEPLOYMENTS_DIR:-"$WORKSPACE_DIR/deployments"}
-VERSION=${WIREGATE_VERSION:-0.4.1-poc}
+VERSION=${WIREGATE_VERSION:-0.4.2-poc}
 DIST_DIR=${WIREGATE_DIST_DIR:-"$WORKSPACE_DIR/build/releases"}
 
 if [ "$#" -eq 0 ]; then

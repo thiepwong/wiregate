@@ -33,7 +33,7 @@ uname -m
 Download the matching release directly on the target host:
 
 ```bash
-VERSION=0.4.1-poc
+VERSION=0.4.2-poc
 ARCH=amd64 # use arm64 for aarch64 hosts
 RELEASE_URL="https://github.com/thiepwong/wiregate/releases/download/v${VERSION}"
 curl -fLO "${RELEASE_URL}/wiregate-${VERSION}-linux-${ARCH}.tar.gz"
