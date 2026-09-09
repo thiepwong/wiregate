@@ -33,7 +33,7 @@ uname -m
 Download the matching release directly on the target host:
 
 ```bash
-VERSION=0.4.0-poc
+VERSION=0.4.1-poc
 ARCH=amd64 # use arm64 for aarch64 hosts
 RELEASE_URL="https://github.com/thiepwong/wiregate/releases/download/v${VERSION}"
 curl -fLO "${RELEASE_URL}/wiregate-${VERSION}-linux-${ARCH}.tar.gz"
@@ -152,7 +152,21 @@ The access state is persisted under `/etc/wiregate-web` and an upgrade does
 not re-enable a disabled web application. Network restriction is intentionally
 a root-only host operation; the web UI cannot grant itself more exposure.
 
-## 6. Verify
+## 6. Recover a forgotten administrator password
+
+Run recovery from an interactive root or SSH terminal:
+
+```bash
+sudo wiregate-admin reset-password --username admin
+```
+
+The password is entered twice without terminal echo and must contain at least
+12 characters. The command temporarily stops an enabled native or Docker web
+runtime so login cannot race the reset transaction. It then unlocks the admin,
+revokes all existing sessions, records an audit event, and restores the prior
+web access state. If web access was already disabled, it stays disabled.
+
+## 7. Verify
 
 ```bash
 sudo systemctl status wiregate-agent.socket wiregate-agent.service
@@ -194,7 +208,7 @@ probes against that address instead of `127.0.0.1`. When web access is disabled,
 `wiregate-web-access status` should report it unavailable while the agent and
 `wg-quick@<interface>.service` remain active.
 
-## 7. Required backups
+## 8. Required backups
 
 Stop the web application and agent or use a consistent SQLite backup, then
 protect these paths:
@@ -210,7 +224,7 @@ protect these paths:
 
 Losing `/etc/wiregate/keys` makes stored secrets unrecoverable.
 
-## 8. Uninstall
+## 9. Uninstall
 
 Preserve configuration, keys, databases, and tunnels:
 
@@ -227,7 +241,7 @@ sudo ./uninstall.sh --purge --confirm-purge
 The `purge` option does not remove `/etc/wireguard` or packages installed by
 APT; manage the tunnels and host packages separately.
 
-## 9. Upgrade an existing installation
+## 10. Upgrade an existing installation
 
 Verify and extract the new bundle as described in section 2, then run:
 
@@ -248,7 +262,7 @@ replaced independently of the data plane. After the upgrade, always verify
 the selected web runtime, its persisted access state, and
 `wg-quick@<interface>.service`. Verify `readyz` only when web access is enabled.
 
-## 10. POC scope
+## 11. POC scope
 
 This version includes discovery and adoption UI, IPAM import, existing peer
 import with or without a preshared key, greenfield interface support, managed,

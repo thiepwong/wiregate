@@ -10,6 +10,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -27,9 +28,13 @@ import (
 	webconfig "github.com/wiregate-project/wiregate/internal/web/config"
 	"github.com/wiregate-project/wiregate/internal/web/httpapi"
 	"github.com/wiregate-project/wiregate/internal/web/repository"
+	"golang.org/x/term"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "reset-password" {
+		os.Exit(resetPassword(os.Args[2:]))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "check-config" {
 		configFlags := flag.NewFlagSet("check-config", flag.ContinueOnError)
 		configPath := configFlags.String("config", "/etc/wiregate/web.yaml", "path to web YAML config")
@@ -159,6 +164,76 @@ func main() {
 	if err := server.Shutdown(shutdownContext); err != nil {
 		logger.Error("graceful web shutdown", "error", err)
 	}
+}
+
+func resetPassword(arguments []string) int {
+	resetFlags := flag.NewFlagSet("reset-password", flag.ContinueOnError)
+	resetFlags.SetOutput(os.Stderr)
+	configPath := resetFlags.String("config", "/etc/wiregate/web.yaml", "path to web YAML config")
+	username := resetFlags.String("username", "", "administrator username to recover")
+	if err := resetFlags.Parse(arguments); err != nil {
+		return 2
+	}
+	if resetFlags.NArg() != 0 || *username == "" {
+		fmt.Fprintln(os.Stderr, "reset-password requires --username <admin>")
+		return 2
+	}
+	input := int(os.Stdin.Fd())
+	if !term.IsTerminal(input) {
+		fmt.Fprintln(os.Stderr, "reset-password requires an interactive terminal")
+		return 1
+	}
+	password, err := readPassword(input, "New password: ")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "read new password:", err)
+		return 1
+	}
+	defer clear(password)
+	confirmation, err := readPassword(input, "Confirm new password: ")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "confirm new password:", err)
+		return 1
+	}
+	defer clear(confirmation)
+	if !bytes.Equal(password, confirmation) {
+		fmt.Fprintln(os.Stderr, "password confirmation does not match")
+		return 1
+	}
+	passwordHash, err := auth.HashPassword(string(password))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "new password rejected:", err)
+		return 1
+	}
+	cfg, err := webconfig.Load(*configPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "load web config:", err)
+		return 1
+	}
+	ctx := context.Background()
+	store, err := repository.Open(ctx, cfg.DatabasePath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "open web database:", err)
+		return 1
+	}
+	defer store.Close()
+	storedUsername, err := store.ResetAdminPassword(ctx, *username, passwordHash, time.Now().UTC())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "reset admin password:", err)
+		return 1
+	}
+	fmt.Fprintf(
+		os.Stdout,
+		"Password reset for administrator %s; all existing web sessions were revoked.\n",
+		storedUsername,
+	)
+	return 0
+}
+
+func readPassword(input int, prompt string) ([]byte, error) {
+	fmt.Fprint(os.Stderr, prompt)
+	password, err := term.ReadPassword(input)
+	fmt.Fprintln(os.Stderr)
+	return password, err
 }
 
 func healthcheck(cfg webconfig.Config) error {

@@ -273,6 +273,72 @@ func (r *Repository) ChangePassword(
 	return tx.Commit()
 }
 
+// ResetAdminPassword performs physical-console recovery for an administrator.
+// The caller is responsible for stopping the web runtime so a login cannot
+// race the password update and session revocation transaction.
+func (r *Repository) ResetAdminPassword(
+	ctx context.Context,
+	username, passwordHash string,
+	now time.Time,
+) (string, error) {
+	username = strings.TrimSpace(username)
+	if username == "" || passwordHash == "" {
+		return "", errors.New("admin username and password hash are required")
+	}
+	tx, err := r.database.BeginTx(ctx, nil)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+	var userID, storedUsername string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT id, username FROM users
+		WHERE username = ? COLLATE NOCASE AND role = 'admin'`, username,
+	).Scan(&userID, &storedUsername); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", errors.New("admin user not found")
+		}
+		return "", err
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE users
+		SET password_hash = ?, status = 'active', failed_login_count = 0,
+		    locked_until_ms = NULL, password_changed_ms = ?, updated_at_ms = ?
+		WHERE id = ? AND role = 'admin'`,
+		passwordHash, now.UnixMilli(), now.UnixMilli(), userID,
+	)
+	if err != nil {
+		return "", err
+	}
+	if affected, _ := result.RowsAffected(); affected != 1 {
+		return "", errors.New("admin user is unavailable")
+	}
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE sessions SET revoked_at_ms = ?
+		WHERE user_id = ? AND revoked_at_ms IS NULL`, now.UnixMilli(), userID,
+	); err != nil {
+		return "", err
+	}
+	auditID, err := ids.NewV7(now)
+	if err != nil {
+		return "", err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO web_audit_events(
+			id, actor_user_id, action, target_type, target_id,
+			request_id, result, details_redacted, created_at_ms
+		) VALUES (?, NULL, 'reset_admin_password_cli', 'user', ?, ?,
+		          'success', 'physical host recovery', ?)`,
+		auditID, userID, "cli-"+auditID, now.UnixMilli(),
+	); err != nil {
+		return "", err
+	}
+	if err := tx.Commit(); err != nil {
+		return "", err
+	}
+	return storedUsername, nil
+}
+
 func (r *Repository) RevokeSession(ctx context.Context, idHash []byte, now time.Time) error {
 	_, err := r.database.ExecContext(ctx, `
 		UPDATE sessions SET revoked_at_ms = ? WHERE id_hash = ? AND revoked_at_ms IS NULL`,
@@ -360,7 +426,7 @@ func insertLoginEvent(
 		INSERT INTO login_events(
 			id, user_id, username_normalized, result, source_ip, request_id, created_at_ms
 		) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		id, user, strings.ToLower(username), nullableWeb(sourceIP), requestID, now.UnixMilli(),
+		id, user, strings.ToLower(username), result, nullableWeb(sourceIP), requestID, now.UnixMilli(),
 	); err != nil {
 		return err
 	}

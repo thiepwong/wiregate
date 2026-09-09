@@ -165,6 +165,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 for required_path in \
   "$SCRIPT_DIR/ARCH" \
   "$SCRIPT_DIR/VERSION" \
+  "$SCRIPT_DIR/admin.sh" \
   "$SCRIPT_DIR/web-access.sh" \
   "$SCRIPT_DIR/bin/wiregate-agent" \
   "$SCRIPT_DIR/bin/wiregate-web" \
@@ -210,7 +211,7 @@ fi
 command -v ip >/dev/null 2>&1 || set -- "$@" iproute2
 command -v nft >/dev/null 2>&1 || set -- "$@" nftables
 command -v openssl >/dev/null 2>&1 || set -- "$@" openssl
-if [ "$WEB_RUNTIME" = native ] && ! command -v runuser >/dev/null 2>&1; then
+if ! command -v runuser >/dev/null 2>&1; then
   set -- "$@" util-linux
 fi
 if [ "$#" -gt 0 ]; then
@@ -246,12 +247,11 @@ for command_name in systemctl systemd-tmpfiles openssl install getent groupadd u
     exit 1
   }
 done
-if [ "$WEB_RUNTIME" = native ]; then
-  command -v runuser >/dev/null 2>&1 || {
-    printf '%s\n' "Required command is missing: runuser" >&2
-    exit 1
-  }
-else
+command -v runuser >/dev/null 2>&1 || {
+  printf '%s\n' "Required command is missing: runuser" >&2
+  exit 1
+}
+if [ "$WEB_RUNTIME" = docker ]; then
   command -v docker >/dev/null 2>&1 || {
     printf '%s\n' "Docker is required when --web-runtime docker is selected" >&2
     exit 1
@@ -308,13 +308,14 @@ install -d -m 0750 -o "$WEB_UID" -g "$WEB_GID" /etc/wiregate-web
 install -d -m 0700 -o "$WEB_UID" -g "$WEB_GID" /var/lib/wiregate-web
 install -d -m 0750 -o "$WEB_UID" -g "$WEB_GID" /etc/wiregate-web/tls
 install -m 0755 "$SCRIPT_DIR/bin/wiregate-agent" /usr/lib/wiregate/wiregate-agent
+install -m 0755 "$SCRIPT_DIR/bin/wiregate-web" /usr/lib/wiregate/wiregate-web
+install -m 0755 "$SCRIPT_DIR/admin.sh" /usr/sbin/wiregate-admin
 install -m 0755 "$SCRIPT_DIR/web-access.sh" /usr/sbin/wiregate-web-access
 install -m 0644 "$SCRIPT_DIR/systemd/wiregate-agent.service" /etc/systemd/system/wiregate-agent.service
 install -m 0644 "$SCRIPT_DIR/systemd/wiregate-agent.socket" /etc/systemd/system/wiregate-agent.socket
 install -m 0644 "$SCRIPT_DIR/systemd/wiregate.conf" /usr/lib/tmpfiles.d/wiregate.conf
 install -m 0644 "$SCRIPT_DIR/compose.yaml" /etc/wiregate-web/compose.yaml
 if [ "$WEB_RUNTIME" = native ]; then
-  install -m 0755 "$SCRIPT_DIR/bin/wiregate-web" /usr/lib/wiregate/wiregate-web
   install -m 0644 "$SCRIPT_DIR/systemd/wiregate-web.service" /etc/systemd/system/wiregate-web.service
 fi
 printf '%s\n' "$WEB_RUNTIME" > /etc/wiregate-web/runtime.mode
@@ -488,4 +489,5 @@ printf '%s\n' \
   "After setup, remove Internet exposure with one of these host commands:" \
   "  sudo wiregate-web-access restrict --bind-address <active-WireGuard-IP>" \
   "  sudo wiregate-web-access disable" \
+  "Forgotten admin password: sudo wiregate-admin reset-password --username <admin>" \
   "Store a backup of /etc/wiregate/keys and both databases."

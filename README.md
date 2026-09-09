@@ -84,23 +84,23 @@ end-to-end testing.
 Build self-contained bundles for Linux `amd64` and `arm64`:
 
 ```bash
-WIREGATE_VERSION=0.4.0-poc GOTOOLCHAIN=auto make -C src bundle
+WIREGATE_VERSION=0.4.1-poc GOTOOLCHAIN=auto make -C src bundle
 ```
 
 The build writes archives and checksum files to `build/releases/`:
 
 ```text
-wiregate-0.4.0-poc-linux-amd64.tar.gz
-wiregate-0.4.0-poc-linux-amd64.tar.gz.sha256
-wiregate-0.4.0-poc-linux-arm64.tar.gz
-wiregate-0.4.0-poc-linux-arm64.tar.gz.sha256
+wiregate-0.4.1-poc-linux-amd64.tar.gz
+wiregate-0.4.1-poc-linux-amd64.tar.gz.sha256
+wiregate-0.4.1-poc-linux-arm64.tar.gz
+wiregate-0.4.1-poc-linux-arm64.tar.gz.sha256
 ```
 
 Build only one target architecture when needed:
 
 ```bash
 cd src
-WIREGATE_VERSION=0.4.0-poc GOTOOLCHAIN=auto ./scripts/build-bundle.sh amd64
+WIREGATE_VERSION=0.4.1-poc GOTOOLCHAIN=auto ./scripts/build-bundle.sh amd64
 ```
 
 ## Install on a Linux WireGuard gateway
@@ -110,7 +110,7 @@ to `amd64`; `aarch64` maps to `arm64`). A target host can download the release
 without cloning the repository:
 
 ```bash
-VERSION=0.4.0-poc
+VERSION=0.4.1-poc
 ARCH=amd64 # use arm64 for aarch64 hosts
 RELEASE_URL="https://github.com/thiepwong/wiregate/releases/download/v${VERSION}"
 curl -fLO "${RELEASE_URL}/wiregate-${VERSION}-linux-${ARCH}.tar.gz"
@@ -125,12 +125,12 @@ Alternatively, copy both files from a local build, then verify and extract
 them:
 
 ```bash
-scp build/releases/wiregate-0.4.0-poc-linux-amd64.tar.gz* user@gateway:/tmp/
+scp build/releases/wiregate-0.4.1-poc-linux-amd64.tar.gz* user@gateway:/tmp/
 ssh user@gateway
 cd /tmp
-sha256sum -c wiregate-0.4.0-poc-linux-amd64.tar.gz.sha256
-tar -xzf wiregate-0.4.0-poc-linux-amd64.tar.gz
-cd wiregate-0.4.0-poc-linux-amd64
+sha256sum -c wiregate-0.4.1-poc-linux-amd64.tar.gz.sha256
+tar -xzf wiregate-0.4.1-poc-linux-amd64.tar.gz
+cd wiregate-0.4.1-poc-linux-amd64
 sha256sum -c SHA256SUMS
 ```
 
@@ -216,6 +216,18 @@ sudo wiregate-web-access enable
 Disabling the web application does not stop the agent or any WireGuard tunnel.
 The enabled/disabled state and restricted bind address are preserved across
 WireGate upgrades.
+
+## Recover a forgotten administrator password
+
+Run the root-only recovery command from an interactive SSH or host terminal:
+
+```bash
+sudo wiregate-admin reset-password --username admin
+```
+
+The command hides password input, requires confirmation, temporarily stops an
+enabled web runtime, unlocks the administrator, and revokes every existing web
+session. A web runtime that was disabled before recovery remains disabled.
 
 ## Verify the deployment
 

@@ -14,7 +14,7 @@ set -eu
 SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 WORKSPACE_DIR=$(CDPATH= cd -- "$SOURCE_DIR/.." && pwd)
 DEPLOYMENTS_DIR=${WIREGATE_DEPLOYMENTS_DIR:-"$WORKSPACE_DIR/deployments"}
-VERSION=${WIREGATE_VERSION:-0.4.0-poc}
+VERSION=${WIREGATE_VERSION:-0.4.1-poc}
 DIST_DIR=${WIREGATE_DIST_DIR:-"$WORKSPACE_DIR/build/releases"}
 
 if [ "$#" -eq 0 ]; then
@@ -60,6 +60,7 @@ for ARCH in "$@"; do
   install -m 0755 "$DEPLOYMENTS_DIR/bundle/install.sh" "$BUNDLE_DIR/install.sh"
   install -m 0755 "$DEPLOYMENTS_DIR/bundle/upgrade.sh" "$BUNDLE_DIR/upgrade.sh"
   install -m 0755 "$DEPLOYMENTS_DIR/bundle/uninstall.sh" "$BUNDLE_DIR/uninstall.sh"
+  install -m 0755 "$DEPLOYMENTS_DIR/bundle/admin.sh" "$BUNDLE_DIR/admin.sh"
   install -m 0755 "$DEPLOYMENTS_DIR/bundle/web-access.sh" "$BUNDLE_DIR/web-access.sh"
   install -m 0644 "$DEPLOYMENTS_DIR/bundle/DEPLOY.md" "$BUNDLE_DIR/DEPLOY.md"
   install -m 0644 "$DEPLOYMENTS_DIR/bundle/compose.yaml" "$BUNDLE_DIR/compose.yaml"

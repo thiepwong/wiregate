@@ -27,6 +27,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 for required_path in \
   "$SCRIPT_DIR/ARCH" \
   "$SCRIPT_DIR/VERSION" \
+  "$SCRIPT_DIR/admin.sh" \
   "$SCRIPT_DIR/web-access.sh" \
   "$SCRIPT_DIR/bin/wiregate-agent" \
   "$SCRIPT_DIR/bin/wiregate-web" \
@@ -64,12 +65,7 @@ else
   exit 1
 fi
 case "$WEB_RUNTIME" in
-  native)
-    command -v runuser >/dev/null 2>&1 || {
-      printf '%s\n' "Required command is missing: runuser" >&2
-      exit 1
-    }
-    ;;
+  native) ;;
   docker)
     command -v docker >/dev/null 2>&1 || {
       printf '%s\n' "Docker is required to upgrade this installation" >&2
@@ -89,6 +85,33 @@ case "$WEB_RUNTIME" in
     exit 1
     ;;
 esac
+if ! command -v runuser >/dev/null 2>&1; then
+  [ -r /etc/os-release ] || {
+    printf '%s\n' "Cannot identify the host OS to install util-linux" >&2
+    exit 1
+  }
+  OS_FAMILY=$(
+    . /etc/os-release
+    printf '%s %s\n' "${ID:-}" "${ID_LIKE:-}"
+  )
+  case "$OS_FAMILY" in
+    *ubuntu*|*debian*) ;;
+    *)
+      printf 'Automatic util-linux installation supports Ubuntu and Debian; detected: %s\n' "$OS_FAMILY" >&2
+      exit 1
+      ;;
+  esac
+  command -v apt-get >/dev/null 2>&1 || {
+    printf '%s\n' "apt-get is required to install util-linux automatically" >&2
+    exit 1
+  }
+  DEBIAN_FRONTEND=noninteractive apt-get update
+  DEBIAN_FRONTEND=noninteractive apt-get install -y util-linux
+fi
+command -v runuser >/dev/null 2>&1 || {
+  printf '%s\n' "Required command is missing after package installation: runuser" >&2
+  exit 1
+}
 
 WEB_ACCESS_STATE=enabled
 if [ -f /etc/wiregate-web/access.state ]; then
@@ -163,13 +186,14 @@ cp -a /etc/wiregate-web "$BACKUP_DIR/"
 cp -a /etc/wireguard "$BACKUP_DIR/"
 
 install -m 0755 "$SCRIPT_DIR/bin/wiregate-agent" /usr/lib/wiregate/wiregate-agent
+install -m 0755 "$SCRIPT_DIR/bin/wiregate-web" /usr/lib/wiregate/wiregate-web
+install -m 0755 "$SCRIPT_DIR/admin.sh" /usr/sbin/wiregate-admin
 install -m 0755 "$SCRIPT_DIR/web-access.sh" /usr/sbin/wiregate-web-access
 install -m 0644 "$SCRIPT_DIR/systemd/wiregate-agent.service" /etc/systemd/system/wiregate-agent.service
 install -m 0644 "$SCRIPT_DIR/systemd/wiregate-agent.socket" /etc/systemd/system/wiregate-agent.socket
 install -m 0644 "$SCRIPT_DIR/systemd/wiregate.conf" /usr/lib/tmpfiles.d/wiregate.conf
 install -m 0644 "$SCRIPT_DIR/compose.yaml" /etc/wiregate-web/compose.yaml
 if [ "$WEB_RUNTIME" = native ]; then
-  install -m 0755 "$SCRIPT_DIR/bin/wiregate-web" /usr/lib/wiregate/wiregate-web
   install -m 0644 "$SCRIPT_DIR/systemd/wiregate-web.service" /etc/systemd/system/wiregate-web.service
 else
   sed -i "s|^WIREGATE_WEB_IMAGE=.*|WIREGATE_WEB_IMAGE=$IMAGE_ID|" "$ENV_FILE"

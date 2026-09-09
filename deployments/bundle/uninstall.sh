@@ -48,6 +48,7 @@ rm -f /etc/systemd/system/wiregate-agent.socket
 rm -f /usr/lib/tmpfiles.d/wiregate.conf
 rm -f /usr/lib/wiregate/wiregate-web
 rm -f /usr/lib/wiregate/wiregate-agent
+rm -f /usr/sbin/wiregate-admin
 rm -f /usr/sbin/wiregate-web-access
 systemctl daemon-reload
 

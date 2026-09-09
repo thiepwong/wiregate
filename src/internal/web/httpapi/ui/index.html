@@ -17,7 +17,13 @@
   <title>WireGate</title>
   <link rel="stylesheet" href="/app.css">
 </head>
-<body>
+<body class="auth-pending">
+  <div id="auth-loading" class="auth-loading" role="status">
+    <div>
+      <p class="eyebrow">WIREGATE</p>
+      <strong>Checking secure session…</strong>
+    </div>
+  </div>
   <header>
     <div>
       <p class="eyebrow">LOCAL GATEWAY CONTROL</p>
@@ -68,7 +74,10 @@
           <p class="eyebrow">PERSISTENT + RUNTIME STATE</p>
           <h2>WireGuard interfaces</h2>
         </div>
-        <span class="phase-label">ADOPT-ONLY PHASE</span>
+        <div class="section-actions">
+          <span class="phase-label">CREATE OR ADOPT</span>
+          <button id="create-interface" type="button">+ Create interface</button>
+        </div>
       </div>
       <div id="interfaces" class="interface-grid" aria-live="polite"></div>
     </section>

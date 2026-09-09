@@ -146,7 +146,7 @@ async function renderInterface(record) {
   $(".peer-total", card).textContent = String(record.peer_count || 0);
 	const mode = enumLabel(record.management_mode, "MANAGEMENT_MODE_");
 	const backend = enumLabel(record.backend, "INTERFACE_BACKEND_");
-	$(".add-peer", card).hidden = mode !== "adopted";
+	$(".add-peer", card).hidden = !["managed", "adopted"].includes(mode);
 	$(".add-peer", card).addEventListener("click", () => openPeer(record));
 	$(".adopt-interface", card).hidden = !(mode === "observed" && backend === "wg quick" && record.config_present);
 	$(".adopt-interface", card).addEventListener("click", () => adoptInterface(record));
@@ -170,7 +170,7 @@ async function load() {
     $("#interface-count").textContent = String(interfaces.length);
     $("#peer-count").textContent = String(interfaces.reduce((total, item) => total + Number(item.peer_count || 0), 0));
     for (const record of interfaces) list.append(await renderInterface(record));
-		if (!interfaces.length) list.innerHTML = '<div class="empty-state">No existing WireGuard interfaces were detected on this host.</div>';
+		if (!interfaces.length) list.innerHTML = '<div class="empty-state">No WireGuard interfaces yet. Select “Create interface” to set up this gateway.</div>';
   } catch (loadError) {
     if (loadError.status === 401) return showAuth();
     $("#agent-status").textContent = "Agent unavailable"; $("#agent-status").classList.remove("online");
@@ -246,6 +246,13 @@ $("#interface-form").addEventListener("submit", async (event) => {
   } catch (error) { showFormError(form, error); }
 });
 $("#reload").addEventListener("click", load);
+$("#create-interface").addEventListener("click", () => {
+  const form = $("#interface-form"); form.reset();
+  form.name.value = "wg0"; form.address.value = "10.77.0.1/24";
+  form.listen_port.value = 51820; form.auto_start.checked = true;
+  form.reason.value = "Create WireGuard interface";
+  $(".form-error", form).hidden = true; $("#interface-dialog").showModal();
+});
 $("#password").addEventListener("click", () => $("#password-dialog").showModal());
 $("#password-form").addEventListener("submit", async (event) => {
   event.preventDefault(); const form = event.currentTarget, values = Object.fromEntries(new FormData(form));
@@ -266,4 +273,8 @@ $("#logout").addEventListener("click", async () => {
   try { await postJSON("/api/v1/auth/logout", {}, {"X-CSRF-Token": csrf()}); } finally { sessionStorage.removeItem("wiregate-csrf"); showAuth(); }
 });
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
-(async () => { try { await getJSON("/api/v1/auth/me"); showApp(); await load(); } catch { showAuth(); } })();
+(async () => {
+  try { await getJSON("/api/v1/auth/me"); showApp(); await load(); }
+  catch { showAuth(); }
+  finally { document.body.classList.remove("auth-pending"); }
+})();

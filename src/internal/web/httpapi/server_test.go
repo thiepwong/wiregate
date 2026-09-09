@@ -144,6 +144,31 @@ func TestAuthStatusHidesBootstrapAfterFirstAdmin(t *testing.T) {
 	if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), `<details id="bootstrap-setup" hidden>`) {
 		t.Fatalf("login page must hide bootstrap by default: status = %d", pageResponse.Code)
 	}
+	for _, marker := range []string{
+		`<body class="auth-pending">`,
+		`id="auth-loading"`,
+		`id="create-interface"`,
+		`CREATE OR ADOPT`,
+	} {
+		if !strings.Contains(pageResponse.Body.String(), marker) {
+			t.Fatalf("UI is missing %q", marker)
+		}
+	}
+	appRequest := httptest.NewRequest(http.MethodGet, "https://gateway.test/app.js", nil)
+	appResponse := httptest.NewRecorder()
+	handler.ServeHTTP(appResponse, appRequest)
+	if appResponse.Code != http.StatusOK {
+		t.Fatalf("app.js status = %d", appResponse.Code)
+	}
+	for _, marker := range []string{
+		`["managed", "adopted"].includes(mode)`,
+		`$("#create-interface").addEventListener`,
+		`document.body.classList.remove("auth-pending")`,
+	} {
+		if !strings.Contains(appResponse.Body.String(), marker) {
+			t.Fatalf("app.js is missing %q", marker)
+		}
+	}
 
 	now := time.Now().UTC()
 	token, tokenHash, err := auth.NewBootstrapToken()
